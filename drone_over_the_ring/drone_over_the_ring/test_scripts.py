@@ -12,12 +12,21 @@ command_list = ["forward 20",
 def mock_routine(img: np.ndarray) -> GateDescriptor:
     return GateDescriptor()
 
+def _help():
+    print("Usage: python3 test_scripts.py [-hf] [--ctrl] [--video] [--cmdlist]")
+    print("=====================")
+    print()
+    print("-h or --help         print help")
+    print("Use -")
+    print("Available modes are:")
+    print("[rc] remote control drone with keyboard")
+    print("[ord] execute command_list of orders given by --cmdlist")
+    print("[vio] video only")
+    print("")
+
 
 if __name__ == "__main__":
     print("===== Welcome to test mode =====")
-    if len(sys.argv) <= 1:
-        print("Please provide drone mode:[order, stream, control]")
-        sys.exit(1)
 
     _mode = sys.argv[1]
     drone = None

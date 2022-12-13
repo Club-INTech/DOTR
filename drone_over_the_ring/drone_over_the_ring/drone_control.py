@@ -183,19 +183,19 @@ class Drone():
                                                      GateDescriptor],
                            tilt: Synchronized) -> None:
 
-        prev_state = (0.0, 0.0, 0.0, 0.0, False)
+        # prev_state = (0.0, 0.0, 0.0, 0.0, False)
         while True:
             img = img_q.get(block=True)
             _gate_descriptor = process_routine(img, tilt.value)
             if _gate_descriptor.type_ == GateType.NO_GATE:
                 ord_q.put("cw 360")
             else:
-                state = (_gate_descriptor.x,
-                         _gate_descriptor.y,
-                         _gate_descriptor.z,
-                         _gate_descriptor.pixel_width
-                         / _gate_descriptor.pixel_height,
-                         True)
+                # state = (_gate_descriptor.x,
+                         # _gate_descriptor.y,
+                         # _gate_descriptor.z,
+                         # _gate_descriptor.pixel_width
+                         # / _gate_descriptor.pixel_height,
+                         # True)
 
             # TODO: implement navigation logic
 
@@ -204,7 +204,6 @@ class Drone():
         if self.__use_order:
             self.execute_order("command")
             time.sleep(self.DELAY)
-            self.execute_order("takeoff")
             self.order_worker.start()
             time.sleep(self.DELAY)
         if self.__use_video:
@@ -229,10 +228,10 @@ class Drone():
             self.navigation_worker.kill()
             time.sleep(self.DELAY)
         if self.video_receiver_worker.is_alive():
+            self.execute_order("streamoff")
             self.video_receiver_worker.kill()
             time.sleep(self.DELAY)
 
-        self.execute_order("streamoff")
         self.execute_order("rc 0 0 0 0")
         self.execute_order("land")
         time.sleep(self.STOP_DELAY)
