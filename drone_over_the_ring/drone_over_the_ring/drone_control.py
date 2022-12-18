@@ -190,6 +190,7 @@ class Drone():
             if _gate_descriptor.type_ == GateType.NO_GATE:
                 ord_q.put("cw 360")
             else:
+                pass
                 # state = (_gate_descriptor.x,
                          # _gate_descriptor.y,
                          # _gate_descriptor.z,
