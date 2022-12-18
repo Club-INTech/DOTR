@@ -6,7 +6,7 @@ import logging
 import os
 
 # Path to save the images
-PATH_TO_SAVE = r'D:\DATASET_Drone'
+PATH_TO_SAVE = "/home/tsimafei/SEM/PFE/photos_pfe/"
 
 # Function to manage the increment of the index of the images for the name
 def index(path):
@@ -28,4 +28,4 @@ while True:
     if key == 27: # ESC
         break
     elif key == ord('i'):
-        cv2.imwrite(PATH_TO_SAVE + r'\image'+str(index(PATH_TO_SAVE))+r'.jpg', img)
+        cv2.imwrite(PATH_TO_SAVE + 'image'+str(index(PATH_TO_SAVE))+r'.jpg', img)
