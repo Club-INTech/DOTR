@@ -43,6 +43,7 @@ class Drone():
                  use_order: bool = True,
                  use_video: bool = True,
                  use_navigation: bool = True,
+                 use_feedback : bool = True,
                  debug: bool = False) -> None:
 
         self.tilt = mp.Value('i', 0)
@@ -50,7 +51,8 @@ class Drone():
         self.__use_order = use_order
         self.__use_video = use_video
         self.__use_navigation = use_navigation
-
+        self.__use_feedback = use_feedback
+        
         self.__order_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__video_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -67,6 +69,7 @@ class Drone():
 
         self.__order_queue = mp.Queue()
         self.__img_process_queue = mp.Queue()
+        self.__img_feedback_queue = mp.Queue()
         self.log_file = "log/drone " + str(datetime.now())
         self.log_file = self.log_file.replace(" ", "_")
 
@@ -111,6 +114,10 @@ class Drone():
                       img_process_routine,
                       self.tilt))
 
+        self.feedback_worker = mp.Process(
+                target=self.feedback_img,
+                args=(self.__img_feedback_queue))
+        
     def __order_executor(self,
                          ord_q: mp.Queue,
                          sock: socket.socket,
@@ -200,6 +207,15 @@ class Drone():
 
             # TODO: implement navigation logic
 
+    def feedback_img(self,
+                        img_q : mp.Queue):
+        
+        while True:
+            img = img_q.get(block=True)
+            cv.imshow('frame', img)
+            if cv.waitKey(1) == ord('q'):
+                break
+
     def run(self) -> None:
 
         if self.__use_order:
@@ -214,6 +230,8 @@ class Drone():
             time.sleep(self.DELAY)
         if self.__use_navigation:
             self.navigation_worker.start()
+        if self.__use_feedback:
+            self.feedback_worker.start()
 
     def join(self):
         if self.__use_navigation:
@@ -222,6 +240,8 @@ class Drone():
             self.video_receiver_worker.join()
         if self.__use_order:
             self.order_worker.join()
+        if self.__use_feedback:
+            self.feedback_worker.join()
         cv.destroyAllWindows()
 
     def stop(self) -> None:
@@ -231,6 +251,9 @@ class Drone():
         if self.video_receiver_worker.is_alive():
             self.execute_order("streamoff")
             self.video_receiver_worker.kill()
+            time.sleep(self.DELAY)
+        if self.feedback_worker.is_alive():
+            self.feedback_worker.kill()
             time.sleep(self.DELAY)
 
         self.execute_order("rc 0 0 0 0")
