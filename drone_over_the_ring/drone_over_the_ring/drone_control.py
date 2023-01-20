@@ -44,6 +44,7 @@ class Drone():
                  use_order: bool = True,
                  use_video: bool = True,
                  use_navigation: bool = True,
+                 use_feedback : bool = True,
                  debug: bool = False) -> None:
 
         self.tilt = mp.Value('i', 0)
@@ -51,7 +52,8 @@ class Drone():
         self.__use_order = use_order
         self.__use_video = use_video
         self.__use_navigation = use_navigation
-
+        self.__use_feedback = use_feedback
+        
         self.__order_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.__server_address = ('', 8889)
@@ -112,6 +114,10 @@ class Drone():
                       img_process_routine,
                       self.tilt))
 
+        self.feedback_worker = mp.Process(
+                target=self.feedback_img,
+                args=(self.__img_feedback_queue))
+        
     def __order_executor(self,
                          ord_q: mp.Queue,
                          sock: socket.socket,
@@ -176,6 +182,7 @@ class Drone():
     def __navigation_cycle(self,
                            img_q: mp.Queue,
                            ord_q: mp.Queue,
+                           feedback_q: mp.Queue,
                            process_routine: Callable[[np.ndarray, float],
                                                      GateDescriptor]
                           ) -> None:
@@ -183,7 +190,8 @@ class Drone():
         # prev_state = (0.0, 0.0, 0.0, 0.0, False)
         while True:
             img = img_q.get(block=True)
-            _gate_descriptor = process_routine(img, tilt.value)
+            img_seg , _gate_descriptor = process_routine(img, tilt.value)
+            feedback_q.put(img_seg)
             if _gate_descriptor.type_ == GateType.NO_GATE:
                 ord_q.put("cw 360")
             else:
@@ -196,6 +204,15 @@ class Drone():
                          # True)
 
             # TODO: implement navigation logic
+
+    def feedback_img(self,
+                        img_q : mp.Queue):
+        
+        while True:
+            img = img_q.get(block=True)
+            cv.imshow('frame', img)
+            if cv.waitKey(1) == ord('q'):
+                break
 
     def run(self) -> None:
 
@@ -218,6 +235,8 @@ class Drone():
             time.sleep(self.DELAY)
         if self.__use_navigation:
             self.navigation_worker.start()
+        if self.__use_feedback:
+            self.feedback_worker.start()
 
     def join(self):
         if self.__use_navigation:
@@ -226,6 +245,8 @@ class Drone():
             self.video_receiver_worker.join()
         if self.__use_order:
             self.order_worker.join()
+        if self.__use_feedback:
+            self.feedback_worker.join()
         cv.destroyAllWindows()
 
     def stop(self) -> None:
@@ -235,6 +256,9 @@ class Drone():
         if self.video_receiver_worker.is_alive():
             self.execute_order("streamoff")
             self.video_receiver_worker.kill()
+            time.sleep(self.DELAY)
+        if self.feedback_worker.is_alive():
+            self.feedback_worker.kill()
             time.sleep(self.DELAY)
 
         # self.execute_order("rc 0 0 0 0")

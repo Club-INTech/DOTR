@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-
+from gate_descriptor import GateDescriptor, GateType
 
 from yolov5.models.common import DetectMultiBackend
 from yolov5.utils.general import (LOGGER, Profile, check_img_size, cv2, non_max_suppression, scale_boxes)
@@ -8,70 +8,111 @@ from yolov5.utils.plots import Annotator, colors
 from yolov5.utils.torch_utils import select_device, smart_inference_mode
 from yolov5.utils.augmentations import letterbox
 
-def load_model(weights, device='', imgsz=(640, 640)):
+from camera import CAMERA_HEIGHT, CAMERA_WIDTH
 
-    # Load model
-    device = select_device(device)
-    model = DetectMultiBackend(weights, device=device)
-    imgsz = check_img_size(imgsz, s=model.stride)  # check image size
-
-    return model
-
-@smart_inference_mode()
-def run(
-        model,
-        im0,
-        imgsz=(640, 640),
-        conf_thres=0.25,  # confidence threshold
-        iou_thres=0.45,  # NMS IOU threshold
-        max_det=1000,  # maximum detections per image
-        classes=None,  # filter by class: --class 0, or --class 0 2 3
-        agnostic_nms=False,  # class-agnostic NMS
-        line_thickness=3  # bounding box thickness (pixels)
-):
-    stride, names, pt = model.stride, model.names, model.pt
+class GateDetector():
     
-    # Image Preprocessing
-    im = letterbox(im0, imgsz, stride, auto=True)[0]  # padded resize
-    im = im.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
-    im = np.ascontiguousarray(im)  # contiguous
+    def __init__(self, weights, device='', imgsz=(640, 640)):
+        self.device = select_device(device)
+        self.model = DetectMultiBackend(weights, device=self.device)
+        self.imgsize = check_img_size(imgsz, s=self.model.stride)  # check image size
+
+        self.conf_thres=0.25  # confidence threshold
+        self.iou_thres=0.45  # NMS IOU threshold
+        self.max_det=1000  # maximum detections per image
+        self.classes=None  # filter by class: --class 0, or --class 0 2 3
+        self.agnostic_nms=False  # class-agnostic NMS
+        self.line_thickness=3  # bounding box thickness (pixels)
+
+    @smart_inference_mode()
+    def run(self, im0):
+        stride, names, pt = self.model.stride, self.model.names, self.model.pt
+        
+        # Image Preprocessing
+        
+        assert im0 is not None, f'Image Not Found'
+        
+        im = letterbox(im0, self.imgsize, stride, auto=True)[0]  # padded resize
+        im = im.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+        im = np.ascontiguousarray(im)  # contiguous
+        
+        # Run inference
+        self.model.warmup(imgsz=(1 if pt or self.model.triton else 1, 3, *self.imgsize))  # warmup
+        seen, dt = 0, (Profile(), Profile(), Profile())
+        with dt[0]:
+            im = torch.from_numpy(im).to(self.model.device)
+            im = im.half() if self.model.fp16 else im.float()  # uint8 to fp16/32
+            im /= 255  # 0 - 255 to 0.0 - 1.0
+            if len(im.shape) == 3:
+                im = im[None]  # expand for batch dim
+
+        # Inference
+        with dt[1]:
+            pred = self.model(im, augment=False, visualize=False)
+        # NMS
+        with dt[2]:
+            pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det)
+        # Second-stage classifier (optional)
+        # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
+
+        # Process predictions
+        for i, det in enumerate(pred):  # per image
+            seen += 1
+            im0 = im0.copy()
+
+            annotator = Annotator(im0, line_width=self.line_thickness, example=str(names))
+            if len(det):
+                # Rescale boxes from img_size to im0 size
+                det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
+
+                # Write results
+                for *xyxy, conf, cls in reversed(det):
+                    c = int(cls)  # integer class
+                    label = f'{names[c]} {conf:.2f}'
+                    annotator.box_label(xyxy, label, color=colors(c, True))
     
-    # Run inference
-    model.warmup(imgsz=(1 if pt or model.triton else 1, 3, *imgsz))  # warmup
-    seen, dt = 0, (Profile(), Profile(), Profile())
-    with dt[0]:
-        im = torch.from_numpy(im).to(model.device)
-        im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
-        im /= 255  # 0 - 255 to 0.0 - 1.0
-        if len(im.shape) == 3:
-            im = im[None]  # expand for batch dim
+        t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
+        LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *self.imgsize)}' % t)
+        
+        # To DO : clean the function to annotate here and create an external methode / we can currently put im0 as the image annoted for the output at this stage
+        
+        
+        # Convertion of det to a gate_descriptor
+        if(len(det) > 0):
+            heights = []
+            for i in range(len(det)):
+                heights.append(det[i][3]-det[i][1])
+            
+            gate_nb = heights.index(max(heights))    
+                
+            if(det[gate_nb][5] == 0):
+                type_ = GateType.CIRCLE_GATE
+            elif(det[gate_nb][5] == 1):
+                type_ = GateType.SQUARE_GATE
+            elif(det[gate_nb][5] == 2):
+                type_ = GateType.HEX_GATE
+                
+            det = GateDescriptor(pixel_width=det[gate_nb][2]-det[gate_nb][0],
+                                    pixel_height=det[gate_nb][3]-det[gate_nb][1],
+                                    score=det[gate_nb][4],
+                                    type_= type_)
+            det.set_xyz_from_image(det[gate_nb][0], det[gate_nb][1], det[gate_nb][2], det[gate_nb][3])
+            
+        else:
+            det = GateDescriptor()
+        
+        return im0, det
 
-    # Inference
-    with dt[1]:
-        pred = model(im, augment=False, visualize=False)
-    # NMS
-    with dt[2]:
-        pred = non_max_suppression(pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det)
-    # Second-stage classifier (optional)
-    # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
-    # Process predictions
-    for i, det in enumerate(pred):  # per image
-        seen += 1
-        im0 = im0.copy()
+detector = GateDetector(r'D:\PFE\DOTR\drone_over_the_ring\drone_over_the_ring\config\wheights_training.pt', device=0)
 
-        annotator = Annotator(im0, line_width=line_thickness, example=str(names))
-        if len(det):
-            # Rescale boxes from img_size to im0 size
-            det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()
+_ , detection = detector.run(cv2.imread(r'D:\PFE\DOTR\dataset\simple_ring\images\test\image000164.jpg'))
 
-            # Write results
-            for *xyxy, conf, cls in reversed(det):
-                c = int(cls)  # integer class
-                label = f'{names[c]} {conf:.2f}'
-                annotator.box_label(xyxy, label, color=colors(c, True))
-  
-    t = tuple(x.t / seen * 1E3 for x in dt)  # speeds per image
-    LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {(1, 3, *imgsz)}' % t)
+print(detection)
+print(_.shape)
+
+while(True):
+    cv2.imshow('image', _)
     
-    return im0, det
+    if cv2.waitKey(1) == ord('q'):
+        break
