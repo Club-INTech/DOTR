@@ -186,6 +186,7 @@ class Drone():
     def __navigation_cycle(self,
                            img_q: mp.Queue,
                            ord_q: mp.Queue,
+                           feedback_q: mp.Queue,
                            process_routine: Callable[[np.ndarray, float],
                                                      GateDescriptor],
                            tilt: Synchronized) -> None:
@@ -193,7 +194,8 @@ class Drone():
         # prev_state = (0.0, 0.0, 0.0, 0.0, False)
         while True:
             img = img_q.get(block=True)
-            _gate_descriptor = process_routine(img, tilt.value)
+            img_seg , _gate_descriptor = process_routine(img, tilt.value)
+            feedback_q.put(img_seg)
             if _gate_descriptor.type_ == GateType.NO_GATE:
                 ord_q.put("cw 360")
             else:
