@@ -102,17 +102,3 @@ class GateDetector():
             det = GateDescriptor()
         
         return im0, det
-
-
-detector = GateDetector(r'D:\PFE\DOTR\drone_over_the_ring\drone_over_the_ring\config\wheights_training.pt', device=0)
-
-_ , detection = detector.run(cv2.imread(r'D:\PFE\DOTR\dataset\simple_ring\images\test\image000164.jpg'))
-
-print(detection)
-print(_.shape)
-
-while(True):
-    cv2.imshow('image', _)
-    
-    if cv2.waitKey(1) == ord('q'):
-        break

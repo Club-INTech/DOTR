@@ -6,6 +6,7 @@ import sys
 import getopt
 import yaml
 import time
+from detect import GateDetector
 import cv2 as cv
 
 
@@ -86,6 +87,7 @@ if __name__ == "__main__":
             _output = arg
 
     drone = None
+    gate_detector = GateDetector(weights="./config/wheights_training.pt")
 
     if _full_mode:
 
@@ -103,7 +105,7 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
 
-        drone = Drone(img_process_routine=mock_routine,
+        drone = Drone(img_process_routine=gate_detector.run,
                       use_order=True,
                       use_video=_video_mode,
                       use_navigation=False,

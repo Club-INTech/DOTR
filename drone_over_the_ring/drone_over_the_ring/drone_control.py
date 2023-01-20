@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from enum import Enum
 import cv2 as cv
 from multiprocessing.sharedctypes import Synchronized
-from typing import Callable
+from typing import Callable, Tuple
 from gate_descriptor import GateDescriptor, GateType
 from datetime import datetime
 import yaml
@@ -39,7 +39,7 @@ class DroneState():
 class Drone():
 
     def __init__(self,
-                 img_process_routine: Callable[[np.ndarray], GateDescriptor],
+                 img_process_routine: Callable[[np.ndarray], Tuple[np.ndarray, GateDescriptor]],
                  navigation_config: str = "config/default_nav_config.yaml",
                  use_order: bool = True,
                  use_video: bool = True,
@@ -104,6 +104,7 @@ class Drone():
         self.video_receiver_worker = mp.Process(
                 target=self.__video_receiver,
                 args=(self.img_process_queue,
+                      img_process_routine,
                       debug)
                 )
 
@@ -114,9 +115,9 @@ class Drone():
                       img_process_routine,
                       self.tilt))
 
-        self.feedback_worker = mp.Process(
-                target=self.feedback_img,
-                args=(self.__img_feedback_queue))
+        # self.feedback_worker = mp.Process(
+        #         target=self.feedback_img,
+        #         args=(self.__img_feedback_queue))
         
     def __order_executor(self,
                          ord_q: mp.Queue,
@@ -160,6 +161,7 @@ class Drone():
 
     def __video_receiver(self,
                          img_q: mp.Queue,
+                         img_process_routine: Callable[[np.ndarray], Tuple[np.ndarray, GateDescriptor]], 
                          debug=False) -> None:
 
         if self.frame_container is None:
@@ -172,6 +174,8 @@ class Drone():
                 frame = np.array(_frame.to_image())
                 if frame is not None:
                     _frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                    if debug:
+                        _frame, _ = img_process_routine(_frame)
                     img_q.put(_frame)
                     print("Ack")
                 time.sleep(self.VIDEO_STREAM_DELAY)
@@ -205,14 +209,14 @@ class Drone():
 
             # TODO: implement navigation logic
 
-    def feedback_img(self,
-                        img_q : mp.Queue):
+    # def feedback_img(self,
+    #                     img_q : mp.Queue):
         
-        while True:
-            img = img_q.get(block=True)
-            cv.imshow('frame', img)
-            if cv.waitKey(1) == ord('q'):
-                break
+    #     while True:
+    #         img = img_q.get(block=True)
+    #         cv.imshow('frame', img)
+    #         if cv.waitKey(1) == ord('q'):
+    #             break
 
     def run(self) -> None:
 
@@ -235,8 +239,8 @@ class Drone():
             time.sleep(self.DELAY)
         if self.__use_navigation:
             self.navigation_worker.start()
-        if self.__use_feedback:
-            self.feedback_worker.start()
+        # if self.__use_feedback:
+        #     self.feedback_worker.start()
 
     def join(self):
         if self.__use_navigation:
@@ -245,8 +249,8 @@ class Drone():
             self.video_receiver_worker.join()
         if self.__use_order:
             self.order_worker.join()
-        if self.__use_feedback:
-            self.feedback_worker.join()
+        # if self.__use_feedback:
+        #     self.feedback_worker.join()
         cv.destroyAllWindows()
 
     def stop(self) -> None:
@@ -257,9 +261,9 @@ class Drone():
             self.execute_order("streamoff")
             self.video_receiver_worker.kill()
             time.sleep(self.DELAY)
-        if self.feedback_worker.is_alive():
-            self.feedback_worker.kill()
-            time.sleep(self.DELAY)
+        # if self.feedback_worker.is_alive():
+        #     self.feedback_worker.kill()
+        #     time.sleep(self.DELAY)
 
         # self.execute_order("rc 0 0 0 0")
         # self.execute_order("land")
