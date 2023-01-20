@@ -4,12 +4,13 @@ import multiprocessing as mp
 import socket
 from dataclasses import dataclass
 from enum import Enum
-import cv2.cv2 as cv
+import cv2 as cv
 from multiprocessing.sharedctypes import Synchronized
 from typing import Callable
 from gate_descriptor import GateDescriptor, GateType
 from datetime import datetime
 import yaml
+import av
 
 
 class NavigationStep(Enum):
@@ -52,21 +53,22 @@ class Drone():
         self.__use_navigation = use_navigation
 
         self.__order_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.__video_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.__server_address = ('', 8889)
         self.__drone_address = ('192.168.10.1', 8889)
-        self.__drone_video_server_address = ('', 11111)
+        self.__drone_video_server_address = 'udp://0.0.0.0:11111'
 
         self.RETRY = 3
         self.TIMEOUT = 5
         self.WAITING = 2
-        self.VIDEO_STREAM_DELAY = 0.05
+        self.VIDEO_STREAM_DELAY = 0.02
         self.DELAY = 0.5
         self.STOP_DELAY = 20
 
-        self.__order_queue = mp.Queue()
-        self.__img_process_queue = mp.Queue()
+        self.frame_container = None
+
+        self.__order_queue = mp.Queue(maxsize=10)
+        self.img_process_queue = mp.Queue(maxsize=5)
         self.log_file = "log/drone " + str(datetime.now())
         self.log_file = self.log_file.replace(" ", "_")
 
@@ -89,7 +91,6 @@ class Drone():
 
         self.__order_socket.settimeout(self.TIMEOUT)
         self.__order_socket.bind(self.__server_address)
-        self.__video_socket.bind(self.__drone_video_server_address)
 
         self.order_worker = mp.Process(
                 target=self.__order_executor,
@@ -100,13 +101,13 @@ class Drone():
 
         self.video_receiver_worker = mp.Process(
                 target=self.__video_receiver,
-                args=(self.__img_process_queue,
+                args=(self.img_process_queue,
                       debug)
                 )
 
         self.navigation_worker = mp.Process(
                 target=self.__navigation_cycle,
-                args=(self.__img_process_queue,
+                args=(self.img_process_queue,
                       self.__order_queue,
                       img_process_routine,
                       self.tilt))
@@ -155,33 +156,29 @@ class Drone():
                          img_q: mp.Queue,
                          debug=False) -> None:
 
-        _stream_now = time.process_time()
-        while True:
-            frame = b''
-            while True:
-                byte_arr, _ = self.__video_socket.recvfrom(2048)
-                frame += byte_arr
-                if len(byte_arr) != 1460:
-                    break
+        if self.frame_container is None:
+            print("No frame container")
+            return
 
-            img = np.asarray(frame, dtype=np.uint8)
+        frame = None
+        try:
+            for _frame in self.frame_container.decode(video=0):
+                frame = np.array(_frame.to_image())
+                if frame is not None:
+                    _frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+                    img_q.put(_frame)
+                    print("Ack")
+                time.sleep(self.VIDEO_STREAM_DELAY)
 
-            if time.process_time() - _stream_now \
-                    >= self.VIDEO_STREAM_DELAY:
-                img_q.put(img)
-                _stream_now = time.process_time()
-
-            if debug:
-                cv.imshow('frame', img)
-                if cv.waitKey(1) == ord('q'):
-                    break
+        except av.error.ExitError:
+            print("Cannot decode frame")
 
     def __navigation_cycle(self,
                            img_q: mp.Queue,
                            ord_q: mp.Queue,
                            process_routine: Callable[[np.ndarray, float],
-                                                     GateDescriptor],
-                           tilt: Synchronized) -> None:
+                                                     GateDescriptor]
+                          ) -> None:
 
         # prev_state = (0.0, 0.0, 0.0, 0.0, False)
         while True:
@@ -210,6 +207,13 @@ class Drone():
         if self.__use_video:
             self.execute_order("streamon")
             time.sleep(self.DELAY)
+
+            try:
+                self.frame_container = av.open(self.__drone_video_server_address, timeout=(self.TIMEOUT, None))
+            except av.error.ExitError as e:
+                print("Can't grad video")
+                print(e)
+
             self.video_receiver_worker.start()
             time.sleep(self.DELAY)
         if self.__use_navigation:
@@ -233,8 +237,8 @@ class Drone():
             self.video_receiver_worker.kill()
             time.sleep(self.DELAY)
 
-        self.execute_order("rc 0 0 0 0")
-        self.execute_order("land")
+        # self.execute_order("rc 0 0 0 0")
+        # self.execute_order("land")
         time.sleep(self.STOP_DELAY)
         print("===== Goodbye =====")
 

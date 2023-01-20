@@ -6,6 +6,7 @@ import sys
 import getopt
 import yaml
 import time
+import cv2 as cv
 
 
 PAUSE = 5
@@ -108,10 +109,16 @@ if __name__ == "__main__":
                       use_navigation=False,
                       debug=True)
 
-        if _ctrl_mode is None:
+        if _ctrl_mode is None and _video_mode:
             print("Waiting until q will be pressed")
-            keyboard.wait('q')
-            drone.stop()
+            drone.run()
+            while True:
+                img = drone.img_process_queue.get(block=True)
+                cv.imshow("frame", img)
+                key = cv.waitKey(1)
+                if key == ord('q'):
+                    break
+            cv.destroyAllWindows()
             sys.exit(0)
 
         elif _ctrl_mode == "cmd":
@@ -134,6 +141,8 @@ if __name__ == "__main__":
 
         elif _ctrl_mode == "rc":
             state_vector = [0, 0, 0, 0]
+            drone.execute_order("takeoff")
+            time.sleep(PAUSE)
             while True:
                 event = keyboard.read_event()
 
