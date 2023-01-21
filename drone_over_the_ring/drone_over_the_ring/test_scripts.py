@@ -105,22 +105,19 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
 
+        use_control = True
+        if _ctrl_mode is None:
+            use_control = False
+
         drone = Drone(img_process_routine=gate_detector.run,
                       use_order=True,
                       use_video=_video_mode,
+                      use_control=use_control,
                       use_navigation=False,
                       debug=True)
 
         if _ctrl_mode is None and _video_mode:
-            print("Waiting until q will be pressed")
             drone.run()
-            while True:
-                img = drone.img_process_queue.get(block=True)
-                cv.imshow("frame", img)
-                key = cv.waitKey(1)
-                if key == ord('q'):
-                    break
-            cv.destroyAllWindows()
             sys.exit(0)
 
         elif _ctrl_mode == "cmd":

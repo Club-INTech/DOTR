@@ -5,12 +5,11 @@ import socket
 from dataclasses import dataclass
 from enum import Enum
 import cv2 as cv
-from multiprocessing.sharedctypes import Synchronized
 from typing import Callable, Tuple
 from gate_descriptor import GateDescriptor, GateType
 from datetime import datetime
 import yaml
-import av
+from djitellopy import Tello
 
 
 class NavigationStep(Enum):
@@ -29,7 +28,7 @@ class DroneState():
     dz: float = 0.0
     prev_dyaw: float = 0.0
     dyaw: float = 0.0
-    not_detected_count: int = 20
+    not_detected_count: int = 0
     not_detected_limit: int = 20
     gate_navigation_step: NavigationStep \
         = NavigationStep.NOT_DETECTED
@@ -43,36 +42,32 @@ class Drone():
                  navigation_config: str = "config/default_nav_config.yaml",
                  use_order: bool = True,
                  use_video: bool = True,
+                 use_control: bool = True,
                  use_navigation: bool = True,
-                 use_feedback : bool = True,
                  debug: bool = False) -> None:
 
-        self.tilt = mp.Value('i', 0)
+        self.img_process_routine = img_process_routine
 
         self.__use_order = use_order
         self.__use_video = use_video
         self.__use_navigation = use_navigation
-        self.__use_feedback = use_feedback
+        self.__use_control = use_control
         
         self.__order_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        self.__server_address = ('', 8889)
-        self.__drone_address = ('192.168.10.1', 8889)
-        self.__drone_video_server_address = 'udp://0.0.0.0:11111'
+        self.parent_conn, self.child_conn = mp.Pipe()
+        self.__order_queue = mp.Queue(maxsize=10)
+        self.stop = False
 
         self.RETRY = 3
         self.TIMEOUT = 5
         self.WAITING = 2
-        self.VIDEO_STREAM_DELAY = 0.02
+        self.TAKEOFF_DELAY = 10
+        self.VIDEO_STREAM_DELAY = 0.2
         self.DELAY = 0.5
         self.STOP_DELAY = 20
 
-        self.frame_container = None
-
-        self.__order_queue = mp.Queue(maxsize=10)
-        self.img_process_queue = mp.Queue(maxsize=5)
-        self.log_file = "log/drone " + str(datetime.now())
-        self.log_file = self.log_file.replace(" ", "_")
+        self.debug = debug
 
         self.kpx = 5.0
         self.kdx = 4.0
@@ -91,184 +86,81 @@ class Drone():
                 if _c in _conf:
                     self.__setattr__(_c, _conf[_c])
 
-        self.__order_socket.settimeout(self.TIMEOUT)
-        self.__order_socket.bind(self.__server_address)
+        self.tello = Tello(retry_count=self.RETRY)
+        self.tello.connect()
 
         self.order_worker = mp.Process(
                 target=self.__order_executor,
                 args=(self.__order_queue,
-                      self.__order_socket,
-                      self.log_file,
-                      self.tilt))
+                      self.TIMEOUT,
+                      self.tello))
 
         self.video_receiver_worker = mp.Process(
                 target=self.__video_receiver,
-                args=(self.img_process_queue,
-                      img_process_routine,
-                      debug)
+                args=(self.tello,
+                      self.child_conn)
                 )
-
-        self.navigation_worker = mp.Process(
-                target=self.__navigation_cycle,
-                args=(self.img_process_queue,
-                      self.__order_queue,
-                      img_process_routine,
-                      self.tilt))
-
-        # self.feedback_worker = mp.Process(
-        #         target=self.feedback_img,
-        #         args=(self.__img_feedback_queue))
         
     def __order_executor(self,
                          ord_q: mp.Queue,
-                         sock: socket.socket,
-                         log_file: str,
-                         tilt: Synchronized) -> None:
+                         timeout: int,
+                         tello: Tello) -> None:
 
         while True:
             _cmd = ord_q.get(block=True)
-            f = open(log_file, 'a')
-            f.write(_cmd + " : Waiting for response\n")
-            for _ in range(self.RETRY):
-                sock.sendto(_cmd.encode('utf-8'), self.__drone_address)
-                time.sleep(self.WAITING)
-
-                # TODO: set tilt of the drone
-
-                try:
-                    bytes_, _ = sock.recvfrom(1024)
-                    if bytes_ == b'ok':
-                        f.write(_cmd + " : ok\n")
-                        break
-                    else:
-                        f.write(_cmd + " : failure\n")
-                except socket.timeout as e:
-                    err = e.args[0]
-                    if err == 'timed out':
-                        time.sleep(self.WAITING)
-                        f.write(_cmd + " : timed out\n")
-                    else:
-                        f.write(_cmd + " : " + str(err) + "\n")
-                    continue
-                except socket.error as e:
-                    f.write(_cmd + " : " + str(e.args[0]) + "\n")
-                    continue
-            f.close()
+            tello.send_control_command(_cmd)
+            
 
     def execute_order(self,
                       order: str) -> None:
         self.__order_queue.put(order)
 
     def __video_receiver(self,
-                         img_q: mp.Queue,
-                         img_process_routine: Callable[[np.ndarray], Tuple[np.ndarray, GateDescriptor]], 
-                         debug=False) -> None:
+                         tello: Tello,
+                         conn) -> None:
 
-        if self.frame_container is None:
-            print("No frame container")
-            return
-
-        frame = None
-        try:
-            for _frame in self.frame_container.decode(video=0):
-                frame = np.array(_frame.to_image())
-                if frame is not None:
-                    _frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-                    if debug:
-                        _frame, _ = img_process_routine(_frame)
-                    img_q.put(_frame)
-                    print("Ack")
-                time.sleep(self.VIDEO_STREAM_DELAY)
-
-        except av.error.ExitError:
-            print("Cannot decode frame")
-
-    def __navigation_cycle(self,
-                           img_q: mp.Queue,
-                           ord_q: mp.Queue,
-                           feedback_q: mp.Queue,
-                           process_routine: Callable[[np.ndarray, float],
-                                                     GateDescriptor]
-                          ) -> None:
-
-        # prev_state = (0.0, 0.0, 0.0, 0.0, False)
+        frame_grabber = tello.get_frame_read()
         while True:
-            img = img_q.get(block=True)
-            img_seg , _gate_descriptor = process_routine(img, tilt.value)
-            feedback_q.put(img_seg)
-            if _gate_descriptor.type_ == GateType.NO_GATE:
-                ord_q.put("cw 360")
-            else:
-                pass
-                # state = (_gate_descriptor.x,
-                         # _gate_descriptor.y,
-                         # _gate_descriptor.z,
-                         # _gate_descriptor.pixel_width
-                         # / _gate_descriptor.pixel_height,
-                         # True)
-
-            # TODO: implement navigation logic
-
-    # def feedback_img(self,
-    #                     img_q : mp.Queue):
-        
-    #     while True:
-    #         img = img_q.get(block=True)
-    #         cv.imshow('frame', img)
-    #         if cv.waitKey(1) == ord('q'):
-    #             break
+            conn.send(frame_grabber.frame)
 
     def run(self) -> None:
 
         if self.__use_order:
-            self.execute_order("command")
-            time.sleep(self.DELAY)
             self.order_worker.start()
             time.sleep(self.DELAY)
         if self.__use_video:
-            self.execute_order("streamon")
-            time.sleep(self.DELAY)
-
-            try:
-                self.frame_container = av.open(self.__drone_video_server_address, timeout=(self.TIMEOUT, None))
-            except av.error.ExitError as e:
-                print("Can't grad video")
-                print(e)
-
             self.video_receiver_worker.start()
             time.sleep(self.DELAY)
-        if self.__use_navigation:
-            self.navigation_worker.start()
-        # if self.__use_feedback:
-        #     self.feedback_worker.start()
+        if self.__use_control:
+            self.execute_order("takeoff")
+            time.sleep(self.TAKEOFF_DELAY)
 
-    def join(self):
-        if self.__use_navigation:
-            self.navigation_worker.join()
+        while not self.stop:
+            if self.__use_video and self.debug:
+                img = self.parent_conn.recv()
+                _img, _ = self.img_process_routine(img)
+                cv.imshow("frame", _img)
+                if cv.waitKey(1) == ord('q'):
+                    self.stop = True
+            elif self.__use_navigation:
+                print("Not implementd")
+            else:
+                print("This functionning mode is not known")
+
         if self.__use_video:
-            self.video_receiver_worker.join()
-        if self.__use_order:
-            self.order_worker.join()
-        # if self.__use_feedback:
-        #     self.feedback_worker.join()
+            self.execute_order("streamoff")
+            time.sleep(self.DELAY)
+        if self.__use_control:
+            self.execute_order("rc 0 0 0 0")
+            self.execute_order("land")
+            time.sleep(self.STOP_DELAY)
+
+        self.video_receiver_worker.kill()
+        self.order_worker.kill()
         cv.destroyAllWindows()
+        self.child_conn.close()
+        self.parent_conn.close()
+
 
     def stop(self) -> None:
-        if self.navigation_worker.is_alive():
-            self.navigation_worker.kill()
-            time.sleep(self.DELAY)
-        if self.video_receiver_worker.is_alive():
-            self.execute_order("streamoff")
-            self.video_receiver_worker.kill()
-            time.sleep(self.DELAY)
-        # if self.feedback_worker.is_alive():
-        #     self.feedback_worker.kill()
-        #     time.sleep(self.DELAY)
-
-        # self.execute_order("rc 0 0 0 0")
-        # self.execute_order("land")
-        time.sleep(self.STOP_DELAY)
-        print("===== Goodbye =====")
-
-        if self.order_worker.is_alive():
-            self.order_worker.kill()
+        self.stop = True
