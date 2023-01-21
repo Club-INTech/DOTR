@@ -88,6 +88,7 @@ class Drone():
 
         self.tello = Tello(retry_count=self.RETRY)
         self.tello.connect()
+        self.tello.streamon()
 
         self.order_worker = mp.Process(
                 target=self.__order_executor,
