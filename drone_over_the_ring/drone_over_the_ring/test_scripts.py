@@ -87,7 +87,7 @@ if __name__ == "__main__":
             _output = arg
 
     drone = None
-    gate_detector = GateDetector(weights="./config/wheights_training.pt")
+    gate_detector = GateDetector(weights="/home/gaetan/DOTR/drone_over_the_ring/drone_over_the_ring/config/wheights_training.pt")
 
     if _full_mode:
 

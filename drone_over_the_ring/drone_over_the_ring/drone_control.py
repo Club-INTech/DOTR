@@ -39,7 +39,7 @@ class Drone():
 
     def __init__(self,
                  img_process_routine: Callable[[np.ndarray], Tuple[np.ndarray, GateDescriptor]],
-                 navigation_config: str = "config/default_nav_config.yaml",
+                 navigation_config: str = "/home/gaetan/DOTR/drone_over_the_ring/drone_over_the_ring/config/default_nav_config.yaml",
                  use_order: bool = True,
                  use_video: bool = True,
                  use_control: bool = True,
@@ -88,6 +88,7 @@ class Drone():
 
         self.tello = Tello(retry_count=self.RETRY)
         self.tello.connect()
+        self.tello.streamon()
 
         self.order_worker = mp.Process(
                 target=self.__order_executor,

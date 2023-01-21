@@ -31,7 +31,7 @@ class GateDescriptor():
         return self.pixel_width / self.pixel_height
     
     def set_xyz_from_image(self, x_min, y_min, x_max, y_max):
-        self.alpha = np.arcoss(self.get_ratio())
+        self.alpha = np.arccos(self.get_ratio())
         real_ratio = CIRCULAR_GATE_REAL_SIZE / (x_max - x_min)
         self.distance = CAMERA_FOCAL * real_ratio
         self.x = ( real_ratio * (y_min + y_max) / 2 ) - CAMERA_HEIGHT/2

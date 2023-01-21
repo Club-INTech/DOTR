@@ -78,6 +78,9 @@ class GateDetector():
         
         
         # Convertion of det to a gate_descriptor
+        
+        det = det.cpu()
+
         if(len(det) > 0):
             heights = []
             for i in range(len(det)):
@@ -92,13 +95,13 @@ class GateDetector():
             elif(det[gate_nb][5] == 2):
                 type_ = GateType.HEX_GATE
                 
-            det = GateDescriptor(pixel_width=det[gate_nb][2]-det[gate_nb][0],
+            gd = GateDescriptor(pixel_width=det[gate_nb][2]-det[gate_nb][0],
                                     pixel_height=det[gate_nb][3]-det[gate_nb][1],
                                     score=det[gate_nb][4],
                                     type_= type_)
-            det.set_xyz_from_image(det[gate_nb][0], det[gate_nb][1], det[gate_nb][2], det[gate_nb][3])
+            gd.set_xyz_from_image(det[gate_nb][0], det[gate_nb][1], det[gate_nb][2], det[gate_nb][3])
             
         else:
-            det = GateDescriptor()
+            gd = GateDescriptor()
         
-        return im0, det
+        return im0, gd
