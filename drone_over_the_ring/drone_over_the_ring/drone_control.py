@@ -249,7 +249,7 @@ class Drone():
                         _st.gate_count += 1
                         continue
 
-                    if abs(_st.prev_dyaw) > abs(_st.dyaw):
+                    if  abs(_st.dyaw) - abs(_st.prev_dyaw) >= _st.eps_yaw:
                         _st.dyaw = (-1) * _st.dyaw
                         _st.yaw_sign = -1.0
                     
