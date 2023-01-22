@@ -100,8 +100,22 @@ class GateDetector():
                                     score=det[gate_nb][4],
                                     type_= type_)
             gd.set_xyz_from_image(det[gate_nb][0], det[gate_nb][1], det[gate_nb][2], det[gate_nb][3])
+            # Adding annotation of the X,Y,Z and distance in meter of the gate
+
+            font                   = cv2.FONT_HERSHEY_SIMPLEX
+            x_pos = int (min(det[gate_nb][2].item()+ 10,720))
+            y_pos = int (min(det[gate_nb][1].item(),960))
+            position1               = (x_pos , y_pos)
+            position2               = (x_pos , y_pos+20)
+            fontScale              = 0.5
+            fontColor              = (255,0,0)
+            txt1 = "X : {x:.3f}, Y : {y:.3f}".format(x=gd.x,y=gd.y)
+            txt2 = "Z : {z:.3f}, D : {d:.3f}".format(z=gd.z,d=gd.distance)
+            cv2.putText(im0, txt1, position1, font, fontScale, fontColor,1,cv2.LINE_AA, False)
+            cv2.putText(im0, txt2, position2, font, fontScale, fontColor,1,cv2.LINE_AA, False)
             
         else:
             gd = GateDescriptor()
+
 
         return im0, gd
