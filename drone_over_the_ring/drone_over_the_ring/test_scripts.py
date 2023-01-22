@@ -90,7 +90,7 @@ if __name__ == "__main__":
     gate_detector = GateDetector(weights="/home/gaetan/DOTR/drone_over_the_ring/drone_over_the_ring/config/wheights_training.pt")
 
     if _full_mode:
-
+        print("===== Enter full mode =====")
         drone = Drone(img_process_routine=gate_detector.run,
                     use_order=True,
                     use_video=True,

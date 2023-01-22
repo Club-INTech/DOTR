@@ -28,7 +28,7 @@ class GateDescriptor():
     score: float = 0.0
     
     def get_ratio(self) -> float:
-        return self.pixel_width / self.pixel_height
+        return min(self.pixel_width / self.pixel_height, 1.0)
     
     def set_xyz_from_image(self, x_min, y_min, x_max, y_max):
         self.alpha = np.arccos(self.get_ratio())
@@ -36,14 +36,7 @@ class GateDescriptor():
         self.distance = CAMERA_FOCAL * real_ratio
         self.x = real_ratio * ( (y_min + y_max) / 2 - CAMERA_WIDTH/2 )
         self.z = real_ratio * ( (x_min + x_max) / 2 - CAMERA_HEIGHT/2 )
-        print("===================== Begin =======================")
-
-        print(self.x)
-        print(self.z)
-        print(self.distance)
-
-        print("===================== END   =======================")
         self.y = np.sqrt(self.distance**2 - self.x**2 - self.z**2)
-
-        print(self.y)
+        print("Distance : " + str(self.distance) + " m")
+        print("X : " + str(self.x) + ", Y : " + str(self.y) + ", Z : " + str(self.z))
         
