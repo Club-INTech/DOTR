@@ -13,7 +13,17 @@ from djitellopy import Tello
 from const import *
 
 
+def __sign(x) -> int:
+    if x < 0:
+        return -1
+    else:
+        return 1
+
 class NavigationStep(Enum):
+    '''
+        Enumeration allowing to track drone state.
+        NOT_DETECTED
+    '''
     NOT_DETECTED = 1
     DETECTED = 2
     GO_THROUGH = 3
@@ -25,7 +35,11 @@ class DroneState():
     eps_y: float = 0.05
     eps_z: float = 0.05
     eps_yaw: float = 0.08
-    s: float = 0.3
+    s: float = 1.0
+    vx: int = 0
+    vy: int = 0
+    vz: int = 0
+    vyaw: int = 0
     dx: float = 0.0
     dy: float = 0.0
     dz: float = 0.0
@@ -59,8 +73,6 @@ class Drone():
         self.__use_video = use_video
         self.__use_navigation = use_navigation
         self.__use_control = use_control
-        
-        self.__order_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.parent_conn, self.child_conn = mp.Pipe()
         self.__order_queue = mp.Queue(maxsize=10)
@@ -172,6 +184,30 @@ class Drone():
                 _img, _desc = self.img_process_routine(img)
                 
                 if not self.video_mock and self.debug:
+                    data = "safe_distance: {s}/dx: {x}/dy: {y}/dz: {z}/dyaw: {dyaw}/prev_dyaw: {prev_dyaw}/" + \
+                        "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: {vyaw}/not_detected_count: {ndc}/gate_count: {gc}/" + \
+                        "gate_detection_step: {gds}".format(s=_st.s,
+                                                            x=_st.dx,
+                                                            y=_st.dy,
+                                                            z=_st.dz,
+                                                            dyaw=_st.dyaw,
+                                                            prev_dyaw=_st.prev_dyaw,
+                                                            vx=_st.vx,
+                                                            vy=_st.vy,
+                                                            vz=_st.vz,
+                                                            vyaw=_st.vyaw,
+                                                            ndc=_st.not_detected_count,
+                                                            gc=_st.gate_count,
+                                                            gds=str(_st.gate_navigation_step))
+                    row_start = 500
+                    row_step = 10
+                    row = row_start
+                    column = 800
+                    for i, _d in enumerate(data.split("/")):
+                        cv.putText(img=_img, text=_d, org=(column, row), 
+                                   fontFace=cv.FONT_HERSHEY_TRIPLEX, fontScale=2, color=(0, 255, 0), 
+                                   thickness=2)
+                        row += row_step
                     cv.imshow("frame", _img)
                     if cv.waitKey(1) == ord('q'):
                         self.stop = True
@@ -248,10 +284,15 @@ class Drone():
                     raw_speed_z = self.__kpz * _st.dz + self.__krz * (_st.dz / _max_d)
                     raw_speed_yaw = self.__kpyaw * _st.dyaw + self.__kryaw * (_st.dyaw / _max_d)
 
-                    speed_x = int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, raw_speed_x)))
-                    speed_y = int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, raw_speed_y)))
-                    speed_z = int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, raw_speed_z)))
-                    speed_yaw = int(min(MAX_YAW_SPEED, max(MIN_YAW_SPEED, raw_speed_yaw)))
+                    speed_x = __sign(raw_speed_x) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_x))))
+                    speed_y = __sign(raw_speed_y) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_y))))
+                    speed_z = __sign(raw_speed_z) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_z))))
+                    speed_yaw = __sign(raw_speed_yaw) * int(min(MAX_YAW_SPEED, max(MIN_YAW_SPEED, abs(raw_speed_yaw))))
+                    
+                    _st.vx = speed_x
+                    _st.vy = speed_y
+                    _st.vz = speed_z
+                    _st.vyaw = speed_yaw
 
                     _cmd = "rc {speed_x} {speed_y} {speed_z} {speed_yaw}".format(speed_x=speed_x,
                                                                                  speed_y=speed_y,
