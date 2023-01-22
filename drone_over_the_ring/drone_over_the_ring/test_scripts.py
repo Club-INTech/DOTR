@@ -91,18 +91,16 @@ if __name__ == "__main__":
 
     if _full_mode:
 
-        # drone = Drone(img_process_routine=detection,
-                    # use_order=True,
-                    # use_video=True,
-                    # use_navigation=True,
-                    # debug=False)
-        # drone.run()
-        # drone.execute_order("takeoff")
-        # drone.join()
-
-        print("Full mode not implemented yet:")
-        print("Missing navigation")
-        sys.exit(1)
+        drone = Drone(img_process_routine=gate_detector.run,
+                    use_order=True,
+                    use_video=True,
+                    use_control=True,
+                    use_navigation=True,
+                    navigation_mock=True,
+                    video_mock=False,
+                    debug=False)
+        drone.run()
+        sys.exit(0)
     else:
 
         use_control = True
@@ -114,13 +112,13 @@ if __name__ == "__main__":
                       use_video=_video_mode,
                       use_control=use_control,
                       use_navigation=False,
+                      navigation_mock=False,
+                      video_mock=False,
                       debug=True)
 
-        if _ctrl_mode is None and _video_mode:
-            drone.run()
-            sys.exit(0)
+        drone.run()
 
-        elif _ctrl_mode == "cmd":
+        if _ctrl_mode == "cmd":
             if _cmd_list is None:
                 print("You must provide a command list in yaml format")
                 sys.exit(1)
@@ -131,7 +129,6 @@ if __name__ == "__main__":
                 print(err)
                 sys.exit(1)
 
-            drone.execute_order("takeoff")
             time.sleep(PAUSE)
             for _cmd in cmd_list["orders"]:
                 drone.execute_order(_cmd)
