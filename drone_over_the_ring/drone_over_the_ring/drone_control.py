@@ -171,6 +171,11 @@ class Drone():
                     img = self.parent_conn.recv()
                 _img, _desc = self.img_process_routine(img)
                 
+                if not self.video_mock and self.debug:
+                    cv.imshow("frame", _img)
+                    if cv.waitKey(1) == ord('q'):
+                        self.stop = True
+                
                 if _st.gate_count >= GATE_NUMBER:
                     self.stop = True
                     break
