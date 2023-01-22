@@ -206,8 +206,8 @@ class Drone():
                     column = 800
                     for i, _d in enumerate(data.split("/")):
                         cv.putText(img=_img, text=_d, org=(column, row), 
-                                   fontFace=cv.FONT_HERSHEY_TRIPLEX, fontScale=2, color=(0, 255, 0), 
-                                   thickness=2)
+                                   fontFace=cv.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), 
+                                   thickness=1)
                         row += row_step
                     cv.imshow("frame", _img)
                     print("Image showed")
