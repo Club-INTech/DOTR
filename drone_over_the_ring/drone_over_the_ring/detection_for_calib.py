@@ -1,14 +1,11 @@
 import torch
 import numpy as np
-from gate_descriptor import GateDescriptor, GateType
 
 from yolov5.models.common import DetectMultiBackend
 from yolov5.utils.general import (LOGGER, Profile, check_img_size, cv2, non_max_suppression, scale_boxes)
 from yolov5.utils.plots import Annotator, colors
 from yolov5.utils.torch_utils import select_device, smart_inference_mode
 from yolov5.utils.augmentations import letterbox
-
-from camera import CAMERA_HEIGHT, CAMERA_WIDTH
 
 class GateDetector():
     
@@ -17,7 +14,7 @@ class GateDetector():
         self.model = DetectMultiBackend(weights, device=self.device)
         self.imgsize = check_img_size(imgsz, s=self.model.stride)  # check image size
 
-        self.conf_thres=0.70  # confidence threshold
+        self.conf_thres=0.25  # confidence threshold
         self.iou_thres=0.45  # NMS IOU threshold
         self.max_det=1000  # maximum detections per image
         self.classes=None  # filter by class: --class 0, or --class 0 2 3
@@ -78,33 +75,4 @@ class GateDetector():
         
         
         # Convertion of det to a gate_descriptor
-        
-        det = det.cpu()
-
-        if(len(det) > 0):
-            heights = []
-            for i in range(len(det)):
-                heights.append(det[i][3]-det[i][1])
-            
-            gate_nb = heights.index(max(heights))    
-                
-            if(det[gate_nb][5] == 0):
-                type_ = GateType.CIRCLE_GATE
-            elif(det[gate_nb][5] == 1):
-                type_ = GateType.SQUARE_GATE
-            elif(det[gate_nb][5] == 2):
-                type_ = GateType.HEX_GATE
-                
-            gd = GateDescriptor(pixel_width=det[gate_nb][2]-det[gate_nb][0],
-                                    pixel_height=det[gate_nb][3]-det[gate_nb][1],
-                                    score=det[gate_nb][4],
-                                    type_= type_)
-            gd.set_xyz_from_image(det[gate_nb][0], det[gate_nb][1], det[gate_nb][2], det[gate_nb][3])
-            
-        else:
-            gd = GateDescriptor()
-        
-        print(det)
-        print(repr(gd))
-
-        return im0, gd
+        return im0, det
