@@ -12,13 +12,6 @@ import yaml
 from djitellopy import Tello
 from const import *
 
-
-def __sign(x) -> int:
-    if x < 0:
-        return -1
-    else:
-        return 1
-
 class NavigationStep(Enum):
     '''
         Enumeration allowing to track drone state.
@@ -133,6 +126,12 @@ class Drone():
                 args=(self.tello,
                       self.child_conn)
                 )
+
+    def __sign(self, x) -> int:
+        if x < 0:
+            return -1
+        else:
+            return 1
         
     def __order_executor(self,
                          ord_q: mp.Queue,
@@ -185,25 +184,26 @@ class Drone():
                 _img, _desc = self.img_process_routine(img)
                 
                 if not self.video_mock and self.debug:
-                    data = "safe_distance: {s}/dx: {x}/dy: {y}/dz: {z}/dyaw: {dyaw}/prev_dyaw: {prev_dyaw}/" + \
-                        "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: {vyaw}/not_detected_count: {ndc}/gate_count: {gc}/" + \
-                        "gate_detection_step: {gds}".format(s=_st.s,
-                                                            x=_st.dx,
-                                                            y=_st.dy,
-                                                            z=_st.dz,
-                                                            dyaw=_st.dyaw,
-                                                            prev_dyaw=_st.prev_dyaw,
-                                                            vx=_st.vx,
-                                                            vy=_st.vy,
-                                                            vz=_st.vz,
-                                                            vyaw=_st.vyaw,
-                                                            ndc=_st.not_detected_count,
-                                                            gc=_st.gate_count,
-                                                            gds=str(_st.gate_navigation_step))
+                    data1 = "safe_distance: {s:.3f}/dx: {x:.3f}/dy: {y:.3f}/dz: {z:.3f}/dyaw: {dyaw:.3f}/prev_dyaw: {prev_dyaw:.3f}/".format(
+                                s=_st.s,
+                                x=_st.dx,
+                                y=_st.dy,
+                                z=_st.dz,
+                                dyaw=_st.dyaw,
+                                prev_dyaw=_st.prev_dyaw)
+                    data2 = "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: {vyaw:.3f}/not_detected_count: {ndc}/gate_count: {gc}/gate_detection_step: {gds}" .format(
+                                vx=_st.vx,
+                                vy=_st.vy,
+                                vz=_st.vz,
+                                vyaw=_st.dyaw,
+                                ndc=_st.not_detected_count,
+                                gc=_st.gate_count,
+                                gds=str(_st.gate_navigation_step))
+                    data = data1 + data2
                     row_start = 500
-                    row_step = 10
+                    row_step = 15
                     row = row_start
-                    column = 800
+                    column = 700
                     for i, _d in enumerate(data.split("/")):
                         cv.putText(img=_img, text=_d, org=(column, row), 
                                    fontFace=cv.FONT_HERSHEY_TRIPLEX, fontScale=0.5, color=(0, 255, 0), 
@@ -285,10 +285,10 @@ class Drone():
                     raw_speed_z = self.__kpz * _st.dz + self.__krz * (_st.dz / _max_d)
                     raw_speed_yaw = self.__kpyaw * _st.dyaw + self.__kryaw * (_st.dyaw / _max_d)
 
-                    speed_x = __sign(raw_speed_x) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_x))))
-                    speed_y = __sign(raw_speed_y) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_y))))
-                    speed_z = __sign(raw_speed_z) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_z))))
-                    speed_yaw = __sign(raw_speed_yaw) * int(min(MAX_YAW_SPEED, max(MIN_YAW_SPEED, abs(raw_speed_yaw))))
+                    speed_x = self.__sign(raw_speed_x) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_x))))
+                    speed_y = self.__sign(raw_speed_y) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_y))))
+                    speed_z = self.__sign(raw_speed_z) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_z))))
+                    speed_yaw = self.__sign(raw_speed_yaw) * int(min(MAX_YAW_SPEED, max(MIN_YAW_SPEED, abs(raw_speed_yaw))))
                     
                     _st.vx = speed_x
                     _st.vy = speed_y
