@@ -103,8 +103,5 @@ class GateDetector():
             
         else:
             gd = GateDescriptor()
-        
-        print(det)
-        print(repr(gd))
 
         return im0, gd

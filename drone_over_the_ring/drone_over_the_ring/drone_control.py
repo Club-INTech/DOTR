@@ -115,12 +115,11 @@ class Drone():
             print("streamon")
         else:
             self.tello = Tello(retry_count=self.RETRY)
+            self.tello.connect()
+            self.tello.streamon()
             if self.navigation_mock:
                 print("command")
                 print("streamon")
-            else:
-                self.tello.connect()
-                self.tello.streamon()
 
         self.order_worker = mp.Process(
                 target=self.__order_executor,
@@ -165,10 +164,10 @@ class Drone():
 
     def run(self) -> None:
 
-        if self.__use_order and not self.mock:
+        if self.__use_order:
             self.order_worker.start()
             time.sleep(self.DELAY)
-        if self.__use_video and not self.mock:
+        if self.__use_video and not self.video_mock:
             self.video_receiver_worker.start()
             time.sleep(self.DELAY)
         if self.__use_control:
@@ -176,8 +175,10 @@ class Drone():
             time.sleep(self.TAKEOFF_DELAY)
 
         if self.__use_navigation and self.__use_control and self.__use_video and self.__use_order:
+            print("===== In full mode =====")
             _st = DroneState()
             while not self.stop:
+                print("===== In navigation loop =====")
                 img = None
                 if not self.video_mock:
                     img = self.parent_conn.recv()
@@ -209,6 +210,7 @@ class Drone():
                                    thickness=2)
                         row += row_step
                     cv.imshow("frame", _img)
+                    print("Image showed")
                     if cv.waitKey(1) == ord('q'):
                         self.stop = True
                 
@@ -253,7 +255,6 @@ class Drone():
                     
                     # calculate of true x and y on the line perpendicular to the center
                     # of gate and distance s from this center
-
                     if abs(_st.dyaw) <= _st.eps_yaw:
                         _st.dx = _st.dx
                         _st.dy = _st.dy - _st.s
