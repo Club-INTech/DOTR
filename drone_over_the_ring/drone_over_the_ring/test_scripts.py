@@ -96,7 +96,7 @@ if __name__ == "__main__":
                     use_video=True,
                     use_control=True,
                     use_navigation=True,
-                    navigation_mock=True,
+                    navigation_mock=False,
                     video_mock=False,
                     debug=True)
         drone.run()

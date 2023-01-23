@@ -24,11 +24,12 @@ class NavigationStep(Enum):
 
 @dataclass(init=True, repr=True, eq=True, order=False)
 class DroneState():
-    eps_x: float = 0.05
-    eps_y: float = 0.05
-    eps_z: float = 0.05
-    eps_yaw: float = 0.08
-    s: float = 1.0
+    eps_x: float = 0.3
+    eps_y: float = 0.2
+    eps_z: float = 0.1
+    eps_yaw: float = 0.1
+    final_eps_yaw: float = 0.08
+    s: float = 1.2
     vx: int = 0
     vy: int = 0
     vz: int = 0
@@ -40,7 +41,7 @@ class DroneState():
     prev_dyaw: float = 0.0
     dyaw: float = 0.0
     not_detected_count: int = 0
-    not_detected_limit: int = 20
+    not_detected_limit: int = 5
     gate_count: int = 0
     gate_navigation_step: NavigationStep \
         = NavigationStep.NOT_DETECTED
@@ -74,7 +75,7 @@ class Drone():
         self.RETRY = 3
         self.TIMEOUT = 5
         self.WAITING = 2
-        self.TAKEOFF_DELAY = 10
+        self.TAKEOFF_DELAY = 5
         self.VIDEO_STREAM_DELAY = 0.2
         self.DELAY = 0.5
         self.STOP_DELAY = 20
@@ -83,17 +84,17 @@ class Drone():
         self.navigation_mock = navigation_mock
         self.video_mock = video_mock
 
-        self.__kpx = 5.0
-        self.__krx = 20.0
+        self.__kpx = 10.0
+        self.__krx = 15.0
 
-        self.__kpy = 5.0
-        self.__kry = 20.0
+        self.__kpy = 10.0
+        self.__kry = 15.0
 
-        self.__kpz = 5.0
-        self.__krz = 20.0
+        self.__kpz = 10.0
+        self.__krz = 15.0
 
-        self.__kpyaw = 15.0
-        self.__kryaw = 10.0
+        self.__kpyaw = 10.0
+        self.__kryaw = 15.0
 
         with open(navigation_config, 'r') as _stream:
             _conf = yaml.safe_load(_stream)
@@ -145,7 +146,10 @@ class Drone():
             if navigation_mock:
                 print(_cmd)
             else:
-                tello.send_control_command(_cmd)
+                if _cmd == "takeoff":
+                    tello.takeoff()
+                else:
+                    tello.send_command_without_return(_cmd)
             
 
     def execute_order(self,
@@ -170,7 +174,11 @@ class Drone():
             self.video_receiver_worker.start()
             time.sleep(self.DELAY)
         if self.__use_control:
-            self.execute_order("takeoff")
+            self.tello.takeoff()
+            # self.execute_order("takeoff")
+            # self.tello.is_flying = True
+            time.sleep(self.TAKEOFF_DELAY)
+            self.execute_order("up 60")
             time.sleep(self.TAKEOFF_DELAY)
 
         if self.__use_navigation and self.__use_control and self.__use_video and self.__use_order:
@@ -210,7 +218,7 @@ class Drone():
                                    thickness=1)
                         row += row_step
                     cv.imshow("frame", _img)
-                    print("Image showed")
+                    #print("Image showed")
                     if cv.waitKey(1) == ord('q'):
                         self.stop = True
                 
@@ -222,6 +230,10 @@ class Drone():
                     _st.not_detected_count += 1
                     if _st.not_detected_count >= _st.not_detected_limit:
                         self.execute_order("rc 0 0 0 0")
+                        _st.vx = 0
+                        _st.vy = 0
+                        _st.vz = 0
+                        _st.vyaw = 0
                         _st.not_detected_count = 0
                         _st.gate_navigation_step = NavigationStep.NOT_DETECTED
                     else:
@@ -230,6 +242,10 @@ class Drone():
                     _st.not_detected_count = 0
                     if _st.gate_navigation_step == NavigationStep.NOT_DETECTED:
                         self.execute_order("rc 0 0 0 0")
+                        _st.vx = 0
+                        _st.vy = 0
+                        _st.vz = 0
+                        _st.vyaw = 0
                         _st.gate_navigation_step = NavigationStep.DETECTED
                     _st.dx = _desc.x
                     _st.dy = _desc.y
@@ -237,15 +253,20 @@ class Drone():
                     _st.dyaw = _st.yaw_sign * _desc.alpha
 
                 if _st.gate_navigation_step == NavigationStep.NOT_DETECTED:
-                    self.execute_order("rc 0 0 0 10")
+                    self.execute_order("rc 0 0 0 30")
+                    _st.vx = 0
+                    _st.vy = 0
+                    _st.vz = 0
+                    _st.vyaw = 30
                 elif _st.gate_navigation_step == NavigationStep.DETECTED:
 
-                    if abs(_st.dyaw) <= _st.eps_yaw and abs(_st.dx) <= _st.eps_x \
+                    if abs(_st.dyaw) <= _st.final_eps_yaw and abs(_st.dx) <= _st.eps_x \
                             and abs(_st.dy) <= _st.eps_y and abs(_st.dz) <= _st.eps_z:
-                        _cmd = "forward " + str(1.5 * _st.s)
+                        print("===== Going through gate =====")
+                        _cmd = "forward " + str(1.2 * _st.s)
                         self.execute_order(_cmd)
                         _st.gate_navigation_step = NavigationStep.NOT_DETECTED
-                        time.sleep(self.WAITING)
+                        time.sleep(self.WAITING + 20)
                         _st.gate_count += 1
                         continue
 
@@ -291,8 +312,8 @@ class Drone():
                     speed_yaw = self.__sign(raw_speed_yaw) * int(min(MAX_YAW_SPEED, max(MIN_YAW_SPEED, abs(raw_speed_yaw))))
                     
                     _st.vx = speed_x
-                    _st.vy = speed_y
-                    _st.vz = speed_z
+                    _st.vy = x12[0]
+                    _st.vz = x12[1]
                     _st.vyaw = speed_yaw
 
                     _cmd = "rc {speed_x} {speed_y} {speed_z} {speed_yaw}".format(speed_x=speed_x,

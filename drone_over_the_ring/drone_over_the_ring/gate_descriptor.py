@@ -34,8 +34,8 @@ class GateDescriptor():
         self.alpha = np.arccos(self.get_ratio())
         real_ratio = CIRCULAR_GATE_REAL_SIZE / (x_max - x_min)
         self.distance = CAMERA_FOCAL * real_ratio
-        self.x = real_ratio * ( (y_min + y_max) / 2 - CAMERA_WIDTH/2 )
-        self.z = real_ratio * ( (x_min + x_max) / 2 - CAMERA_HEIGHT/2 )
+        self.x = real_ratio * ( (x_min + x_max) / 2 - CAMERA_WIDTH/2 )
+        self.z = -real_ratio * ( (y_min + y_max) / 2 - CAMERA_HEIGHT/2 ) 
         self.y = np.sqrt(self.distance**2 - self.x**2 - self.z**2)
         print("Distance : " + str(self.distance) + " m")
         print("X : " + str(self.x) + ", Y : " + str(self.y) + ", Z : " + str(self.z))
