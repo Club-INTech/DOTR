@@ -37,6 +37,11 @@ class DroneState():
     dx: float = 0.0
     dy: float = 0.0
     dz: float = 0.0
+    sumX: float = 0.0
+    sumY: float = 0.0
+    sumZ: float = 0.0
+    sumYaw: float = 0.0
+    
     yaw_sign: float = 1.0
     prev_dyaw: float = 0.0
     dyaw: float = 0.0
@@ -86,15 +91,19 @@ class Drone():
 
         self.__kpx = 10.0
         self.__krx = 15.0
-
+        self.__kix = 0.1
+        
         self.__kpy = 10.0
         self.__kry = 15.0
+        self.__kiy = 0.1
 
         self.__kpz = 10.0
         self.__krz = 15.0
+        self.__kiz = 0.1
 
         self.__kpyaw = 10.0
         self.__kryaw = 15.0
+        self.__kiyaw = 0.1
 
         with open(navigation_config, 'r') as _stream:
             _conf = yaml.safe_load(_stream)
@@ -299,6 +308,12 @@ class Drone():
                         else:
                             _st.dx = max(x12[0], x12[1])
                         _st.dy = _alpha * _st.dx + _beta 
+                    
+                    # Update of the Sum
+                    _st.sumX = min(abs(_st.sumX),MAX_INT_SUM) * _st.sumX / abs(_st.sumX)
+                    _st.sumY = min(abs(_st.sumY),MAX_INT_SUM) * _st.sumY / abs(_st.sumY)
+                    _st.sumZ = min(abs(_st.sumZ),MAX_INT_SUM) * _st.sumZ / abs(_st.sumZ)
+                    _st.sumYaw = min(abs(_st.sumYaw),MAX_INT_SUM) * _st.sumYaw / abs(_st.sumYaw)
 
                     _max_d = max([_st.dx, _st.dy, _st.dz])
                     raw_speed_x = self.__kpx * _st.dx + self.__krx * (_st.dx / _max_d)
