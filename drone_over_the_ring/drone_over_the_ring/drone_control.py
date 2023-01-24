@@ -67,6 +67,7 @@ class Drone():
                  debug: bool = False) -> None:
 
         self.img_process_routine = img_process_routine
+        self.video_lock = mp.Lock()
 
         self.__use_order = use_order
         self.__use_video = use_video
@@ -137,6 +138,7 @@ class Drone():
         self.video_receiver_worker = mp.Process(
                 target=self.__video_receiver,
                 args=(self.tello,
+                      self.video_lock,
                       self.child_conn)
                 )
 
@@ -162,20 +164,25 @@ class Drone():
                     tello.takeoff()
                 else:
                     tello.send_command_without_return(_cmd)
+                    
+    def __clear_video_conn(self):
+        while self.parent_conn.poll():
+            _ = self.parent_conn.recv()
             
-
     def execute_order(self,
                       order: str) -> None:
         self.__order_queue.put(order)
 
     def __video_receiver(self,
                          tello: Tello,
+                         video_lock: mp.Lock,
                          conn) -> None:
         if tello is None:
             return
         frame_grabber = tello.get_frame_read()
         while True:
-            conn.send(frame_grabber.frame)
+            with video_lock:
+                conn.send(frame_grabber.frame)
 
     def run(self) -> None:
 
@@ -308,16 +315,17 @@ class Drone():
                         print("!!!!!===== Going through gate =====!!!!!")
                         self.execute_order("rc 0 0 0 0")
                         time.sleep(self.WAITING)
-                        self.tello.move_forward(int(1.2 * _st.s*100))
-                        #self.tello.move_forward(240)
-                        _st.gate_navigation_step = NavigationStep.NOT_DETECTED
-                        _st.sumX = 0
-                        _st.sumY = 0
-                        _st.sumZ = 0
-                        _st.sumYaw = 0
-                        time.sleep(self.WAITING+10)
-                        _st.gate_count += 1
-                        continue
+                        with self.video_lock:
+                            self.__clear_video_conn()
+                            self.tello.move_forward(int(1.2 * _st.s*100))
+                            _st.gate_navigation_step = NavigationStep.NOT_DETECTED
+                            _st.sumX = 0
+                            _st.sumY = 0
+                            _st.sumZ = 0
+                            _st.sumYaw = 0
+                            time.sleep(self.WAITING+10)
+                            _st.gate_count += 1
+                            continue
                     
                     # Update of the Sum
                     _st.sumX = min(abs(_st.sumX + _st.dx),MAX_INT_SUM) * self.__sign(_st.sumX)
