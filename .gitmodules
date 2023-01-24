@@ -1,1 +1,4 @@
 
+[submodule "tello_ros_ws/src/tello-ros2-gazebo"]
+	path = tello_ros_ws/src/tello-ros2-gazebo
+	url = git@github.com:Club-INTech/tello-ros2-gazebo.git
