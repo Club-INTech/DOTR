@@ -107,10 +107,12 @@ class Drone():
 
         with open(navigation_config, 'r') as _stream:
             _conf = yaml.safe_load(_stream)
-            coefs = ["kpx", "krx", "kpy", "kry", "kpz", "krz", "kpyaw", "kryaw"]
+            coefs = ["kpx", "krx", "kix", "kpy", 
+                     "kry", "kiy", "kpz", "krz", 
+                     "kiz", "kpyaw", "kryaw", "kiyaw"]
             for _c in coefs:
                 if _c in _conf:
-                    self.__setattr__(_c, _conf[_c])
+                    self.__setattr__("_Drone__" + _c, _conf[_c])
 
         self.tello = None
         if self.navigation_mock and self.video_mock:
@@ -184,8 +186,6 @@ class Drone():
             time.sleep(self.DELAY)
         if self.__use_control:
             self.tello.takeoff()
-            # self.execute_order("takeoff")
-            # self.tello.is_flying = True
             time.sleep(self.TAKEOFF_DELAY)
             self.execute_order("up 60")
             time.sleep(self.TAKEOFF_DELAY)
@@ -227,7 +227,6 @@ class Drone():
                                    thickness=1)
                         row += row_step
                     cv.imshow("frame", _img)
-                    #print("Image showed")
                     if cv.waitKey(1) == ord('q'):
                         self.stop = True
                 
@@ -310,16 +309,16 @@ class Drone():
                         _st.dy = _alpha * _st.dx + _beta 
                     
                     # Update of the Sum
-                    _st.sumX = min(abs(_st.sumX),MAX_INT_SUM) * _st.sumX / abs(_st.sumX)
-                    _st.sumY = min(abs(_st.sumY),MAX_INT_SUM) * _st.sumY / abs(_st.sumY)
-                    _st.sumZ = min(abs(_st.sumZ),MAX_INT_SUM) * _st.sumZ / abs(_st.sumZ)
-                    _st.sumYaw = min(abs(_st.sumYaw),MAX_INT_SUM) * _st.sumYaw / abs(_st.sumYaw)
+                    _st.sumX = min(abs(_st.sumX + _st.dx),MAX_INT_SUM) * self.__sign(_st.sumX)
+                    _st.sumY = min(abs(_st.sumY + _st.dy),MAX_INT_SUM) * self.__sign(_st.sumY)
+                    _st.sumZ = min(abs(_st.sumZ + _st.dz),MAX_INT_SUM) * self.__sign(_st.sumZ)
+                    _st.sumYaw = min(abs(_st.sumYaw + _st.dyaw),MAX_INT_SUM) * self.__sign(_st.sumYaw)
 
                     _max_d = max([_st.dx, _st.dy, _st.dz])
-                    raw_speed_x = self.__kpx * _st.dx + self.__krx * (_st.dx / _max_d)
-                    raw_speed_y = self.__kpy * _st.dy + self.__kry * (_st.dy / _max_d)
-                    raw_speed_z = self.__kpz * _st.dz + self.__krz * (_st.dz / _max_d)
-                    raw_speed_yaw = self.__kpyaw * _st.dyaw + self.__kryaw * (_st.dyaw / _max_d)
+                    raw_speed_x = self.__kpx * _st.dx + self.__krx * (_st.dx / _max_d) + self.__kix * _st.sumX
+                    raw_speed_y = self.__kpy * _st.dy + self.__kry * (_st.dy / _max_d) + self.__kiy * _st.sumY
+                    raw_speed_z = self.__kpz * _st.dz + self.__krz * (_st.dz / _max_d) + self.__kiz * _st.sumZ
+                    raw_speed_yaw = self.__kpyaw * _st.dyaw + self.__kryaw * (_st.dyaw / _max_d) + self.__kiyaw * _st.sumYaw
 
                     speed_x = self.__sign(raw_speed_x) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_x))))
                     speed_y = self.__sign(raw_speed_y) * int(min(MAX_DRONE_SPEED, max(MIN_DRONE_SPEED, abs(raw_speed_y))))
