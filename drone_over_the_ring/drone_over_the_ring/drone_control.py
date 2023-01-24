@@ -7,6 +7,7 @@ from enum import Enum
 import cv2 as cv
 from typing import Callable, Tuple
 from gate_descriptor import GateDescriptor, GateType
+import threading
 from datetime import datetime
 import yaml
 from djitellopy import Tello
@@ -26,10 +27,10 @@ class NavigationStep(Enum):
 
 @dataclass(init=True, repr=True, eq=True, order=False)
 class DroneState():
-    eps_d: float = 0.2
+    eps_d: float = 0.18
     eps_yaw: float = 0.1
     final_eps_yaw: float = 0.08
-    s: float = 1.8
+    s: float = 1.6
     vx: int = 0
     vy: int = 0
     vz: int = 0
@@ -67,7 +68,7 @@ class Drone():
                  debug: bool = False) -> None:
 
         self.img_process_routine = img_process_routine
-        self.video_lock = mp.Lock()
+        self.video_lock = threading.Lock()
 
         self.__use_order = use_order
         self.__use_video = use_video
@@ -81,6 +82,7 @@ class Drone():
         self.RETRY = 3
         self.TIMEOUT = 5
         self.WAITING = 2
+        self.FORWARD_WAITING = 4
         self.TAKEOFF_DELAY = 5
         self.VIDEO_STREAM_DELAY = 0.2
         self.DELAY = 0.5
@@ -167,6 +169,7 @@ class Drone():
                     
     def __clear_video_conn(self):
         while self.parent_conn.poll():
+            print("clearing video conn")
             _ = self.parent_conn.recv()
             
     def execute_order(self,
@@ -181,7 +184,7 @@ class Drone():
             return
         frame_grabber = tello.get_frame_read()
         while True:
-            with video_lock:
+            if not video_lock.locked():    
                 conn.send(frame_grabber.frame)
 
     def run(self) -> None:
@@ -273,7 +276,7 @@ class Drone():
                     _st.dyaw = _st.yaw_sign * _desc.alpha
 
                 if _st.gate_navigation_step == NavigationStep.NOT_DETECTED:
-                    self.execute_order("rc 0 0 0 30")
+                    self.execute_order("rc 0 0 0 40")
                     _st.vx = 0
                     _st.vy = 0
                     _st.vz = 0
@@ -315,17 +318,18 @@ class Drone():
                         print("!!!!!===== Going through gate =====!!!!!")
                         self.execute_order("rc 0 0 0 0")
                         time.sleep(self.WAITING)
-                        with self.video_lock:
-                            self.__clear_video_conn()
-                            self.tello.move_forward(int(1.2 * _st.s*100))
-                            _st.gate_navigation_step = NavigationStep.NOT_DETECTED
-                            _st.sumX = 0
-                            _st.sumY = 0
-                            _st.sumZ = 0
-                            _st.sumYaw = 0
-                            time.sleep(self.WAITING+10)
-                            _st.gate_count += 1
-                            continue
+                        self.tello.move_forward(int(1.2 * _st.s*100))
+                        _st.gate_navigation_step = NavigationStep.NOT_DETECTED
+                        _st.sumX = 0
+                        _st.sumY = 0
+                        _st.sumZ = 0
+                        _st.sumYaw = 0
+                        time.sleep(self.FORWARD_WAITING)
+                        self.video_lock.acquire()
+                        self.__clear_video_conn()
+                        self.video_lock.release()
+                        _st.gate_count += 1
+                        continue
                     
                     # Update of the Sum
                     _st.sumX = min(abs(_st.sumX + _st.dx),MAX_INT_SUM) * self.__sign(_st.sumX)
