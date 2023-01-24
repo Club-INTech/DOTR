@@ -17,7 +17,7 @@ class GateDetector():
         self.model = DetectMultiBackend(weights, device=self.device)
         self.imgsize = check_img_size(imgsz, s=self.model.stride)  # check image size
 
-        self.conf_thres=0.45  # confidence threshold
+        self.conf_thres=0.70  # confidence threshold
         self.iou_thres=0.45  # NMS IOU threshold
         self.max_det=1000  # maximum detections per image
         self.classes=None  # filter by class: --class 0, or --class 0 2 3
@@ -95,11 +95,11 @@ class GateDetector():
             elif(det[gate_nb][5] == 2):
                 type_ = GateType.HEX_GATE
                 
-            gd = GateDescriptor(pixel_width=det[gate_nb][2]-det[gate_nb][0],
-                                    pixel_height=det[gate_nb][3]-det[gate_nb][1],
-                                    score=det[gate_nb][4],
+            gd = GateDescriptor(pixel_width=det[gate_nb][2].item()-det[gate_nb][0].item(),
+                                    pixel_height=det[gate_nb][3].item()-det[gate_nb][1].item(),
+                                    score=det[gate_nb][4].item(),
                                     type_= type_)
-            gd.set_xyz_from_image(det[gate_nb][0], det[gate_nb][1], det[gate_nb][2], det[gate_nb][3])
+            gd.set_xyz_from_image(det[gate_nb][0].item(), det[gate_nb][1].item(), det[gate_nb][2].item(), det[gate_nb][3].item())
             # Adding annotation of the X,Y,Z and distance in meter of the gate
 
             font                   = cv2.FONT_HERSHEY_SIMPLEX

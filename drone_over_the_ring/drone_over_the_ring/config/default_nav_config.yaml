@@ -1,12 +1,12 @@
 kpx: 12.0
-krx: 15.0
+krx: 13.5
 kix: 0.1
 kpy: 12.0
-kry: 15.0
+kry: 10.0
 kiy: 0.1
 kpz: 12.0
-krz: 15.0
+krz: 18.0
 kiz: 0.1
 kpyaw: 15.0
 kryaw: 15.0
-kiyaw: 0.1
+kiyaw: 1.0

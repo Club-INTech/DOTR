@@ -11,6 +11,8 @@ from datetime import datetime
 import yaml
 from djitellopy import Tello
 from const import *
+import logging
+
 
 class NavigationStep(Enum):
     '''
@@ -24,12 +26,10 @@ class NavigationStep(Enum):
 
 @dataclass(init=True, repr=True, eq=True, order=False)
 class DroneState():
-    eps_x: float = 0.3
-    eps_y: float = 0.2
-    eps_z: float = 0.1
+    eps_d: float = 0.2
     eps_yaw: float = 0.1
     final_eps_yaw: float = 0.08
-    s: float = 1.2
+    s: float = 1.8
     vx: int = 0
     vy: int = 0
     vz: int = 0
@@ -41,7 +41,7 @@ class DroneState():
     sumY: float = 0.0
     sumZ: float = 0.0
     sumYaw: float = 0.0
-    
+    offsetZ: float = 0.50
     yaw_sign: float = 1.0
     prev_dyaw: float = 0.0
     dyaw: float = 0.0
@@ -57,7 +57,7 @@ class Drone():
 
     def __init__(self,
                  img_process_routine: Callable[[np.ndarray], Tuple[np.ndarray, GateDescriptor]],
-                 navigation_config: str = "/home/gaetan/DOTR/drone_over_the_ring/drone_over_the_ring/config/default_nav_config.yaml",
+                 navigation_config: str = "./config/default_nav_config.yaml",
                  use_order: bool = True,
                  use_video: bool = True,
                  use_control: bool = True,
@@ -122,6 +122,7 @@ class Drone():
             self.tello = Tello(retry_count=self.RETRY)
             self.tello.connect()
             self.tello.streamon()
+            #self.tello.LOGGER.setLevel(logging.ERROR)
             if self.navigation_mock:
                 print("command")
                 print("streamon")
@@ -191,10 +192,10 @@ class Drone():
             time.sleep(self.TAKEOFF_DELAY)
 
         if self.__use_navigation and self.__use_control and self.__use_video and self.__use_order:
-            print("===== In full mode =====")
+            #print("===== In full mode =====")
             _st = DroneState()
             while not self.stop:
-                print("===== In navigation loop =====")
+                #print("===== In navigation loop =====")
                 img = None
                 if not self.video_mock:
                     img = self.parent_conn.recv()
@@ -244,6 +245,10 @@ class Drone():
                         _st.vyaw = 0
                         _st.not_detected_count = 0
                         _st.gate_navigation_step = NavigationStep.NOT_DETECTED
+                        _st.sumX = 0
+                        _st.sumY = 0
+                        _st.sumZ = 0
+                        _st.sumYaw = 0
                     else:
                         continue
                 else:
@@ -257,7 +262,7 @@ class Drone():
                         _st.gate_navigation_step = NavigationStep.DETECTED
                     _st.dx = _desc.x
                     _st.dy = _desc.y
-                    _st.dz = _desc.z
+                    _st.dz = _desc.z - _st.offsetZ
                     _st.dyaw = _st.yaw_sign * _desc.alpha
 
                 if _st.gate_navigation_step == NavigationStep.NOT_DETECTED:
@@ -267,16 +272,6 @@ class Drone():
                     _st.vz = 0
                     _st.vyaw = 30
                 elif _st.gate_navigation_step == NavigationStep.DETECTED:
-
-                    if abs(_st.dyaw) <= _st.final_eps_yaw and abs(_st.dx) <= _st.eps_x \
-                            and abs(_st.dy) <= _st.eps_y and abs(_st.dz) <= _st.eps_z:
-                        print("===== Going through gate =====")
-                        _cmd = "forward " + str(1.2 * _st.s)
-                        self.execute_order(_cmd)
-                        _st.gate_navigation_step = NavigationStep.NOT_DETECTED
-                        time.sleep(self.WAITING + 20)
-                        _st.gate_count += 1
-                        continue
 
                     if  abs(_st.dyaw) - abs(_st.prev_dyaw) >= _st.eps_yaw:
                         _st.dyaw = (-1) * _st.dyaw
@@ -306,7 +301,23 @@ class Drone():
                             _st.dx = min(x12[0], x12[1])
                         else:
                             _st.dx = max(x12[0], x12[1])
-                        _st.dy = _alpha * _st.dx + _beta 
+                        _st.dy = _alpha * _st.dx + _beta
+
+                    print((_st.dx*_st.dx)+(_st.dy*_st.dy)+(_st.dz*_st.dz)) 
+                    if (_st.dx**2)+(_st.dy**2)+(_st.dz**2) <= _st.eps_d and abs(_st.dyaw) <= _st.final_eps_yaw:                
+                        print("!!!!!===== Going through gate =====!!!!!")
+                        self.execute_order("rc 0 0 0 0")
+                        time.sleep(self.WAITING)
+                        self.tello.move_forward(int(1.2 * _st.s*100))
+                        #self.tello.move_forward(240)
+                        _st.gate_navigation_step = NavigationStep.NOT_DETECTED
+                        _st.sumX = 0
+                        _st.sumY = 0
+                        _st.sumZ = 0
+                        _st.sumYaw = 0
+                        time.sleep(self.WAITING+10)
+                        _st.gate_count += 1
+                        continue
                     
                     # Update of the Sum
                     _st.sumX = min(abs(_st.sumX + _st.dx),MAX_INT_SUM) * self.__sign(_st.sumX)
@@ -326,8 +337,8 @@ class Drone():
                     speed_yaw = self.__sign(raw_speed_yaw) * int(min(MAX_YAW_SPEED, max(MIN_YAW_SPEED, abs(raw_speed_yaw))))
                     
                     _st.vx = speed_x
-                    _st.vy = x12[0]
-                    _st.vz = x12[1]
+                    _st.vy = speed_y
+                    _st.vz = speed_z
                     _st.vyaw = speed_yaw
 
                     _cmd = "rc {speed_x} {speed_y} {speed_z} {speed_yaw}".format(speed_x=speed_x,

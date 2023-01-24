@@ -37,6 +37,4 @@ class GateDescriptor():
         self.x = real_ratio * ( (x_min + x_max) / 2 - CAMERA_WIDTH/2 )
         self.z = -real_ratio * ( (y_min + y_max) / 2 - CAMERA_HEIGHT/2 ) 
         self.y = np.sqrt(self.distance**2 - self.x**2 - self.z**2)
-        print("Distance : " + str(self.distance) + " m")
-        print("X : " + str(self.x) + ", Y : " + str(self.y) + ", Z : " + str(self.z))
         
