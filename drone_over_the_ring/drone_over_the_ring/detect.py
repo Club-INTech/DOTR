@@ -8,8 +8,6 @@ from yolov5.utils.plots import Annotator, colors
 from yolov5.utils.torch_utils import select_device, smart_inference_mode
 from yolov5.utils.augmentations import letterbox
 
-from camera import CAMERA_HEIGHT, CAMERA_WIDTH
-
 class GateDetector():
     
     def __init__(self, weights, device='', imgsz=(640, 640)):
