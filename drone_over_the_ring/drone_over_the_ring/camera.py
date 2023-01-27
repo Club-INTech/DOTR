@@ -1,5 +1,4 @@
 import cv2 as cv
-from detection_for_calib import GateDetector
 #from djitellopy import Tello
 
 def camera_configuration():

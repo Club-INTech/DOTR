@@ -5,10 +5,11 @@ from const import *
 
 class GateType(Enum):
     """
-    
+    Enum for the types of the gates that can be detected.
+    There is a type for no gate detected.
 
     Args:
-        Enum (_type_): _description_
+        Enum (_type_): a type of a gate
     """
     NO_GATE = 1
     CIRCLE_GATE = 2
@@ -18,6 +19,41 @@ class GateType(Enum):
 
 @dataclass(init=True, repr=True, eq=True, order=False, unsafe_hash=False)
 class GateDescriptor():
+    """
+    GateDescriptor class allows to save gate's parameters in real world
+    (x, y, z for example) which can be used to control the drone and
+    making it go through the chosen gate.
+
+    Attributes
+    ----------
+    x : float
+        A relative position of the drone across x axis
+    y : float
+        A relative position of the drone across y axis
+    z : float
+        A relative position of the drone across z axis
+    alpha : float
+        A relative  angle of rotation around z aix of the drone
+    distance: float
+        A distance from the drone to the gate
+    pixel_width: int
+        A width of the gate in pixels
+    pixel_height:
+        A height of the gate in pixels
+    type_: GateType
+        A type of the gate
+    score: float
+        A maximum match score
+
+    Methods
+    -------
+    get_ratio():
+        Calculates a ratio width to height in pixels in order to
+        find the rotation angle
+    set_xyz_from_image(x_min, y_min, x_max, y_max):
+        Allows to calculate all gate's parameters: x, y, z, alpha and distance
+    """
+    
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -29,13 +65,32 @@ class GateDescriptor():
     score: float = 0.0
     
     def get_ratio(self) -> float:
+        """
+        Calculates a width to height ratio which cannot be greater then one 
+        (false detections)
+
+        Returns:
+            float: a ratio leveled off to one
+        """
+        
         return min(self.pixel_width / self.pixel_height, 1.0)
     
-    def set_xyz_from_image(self, x_min, y_min, x_max, y_max):
+    def set_xyz_from_image(self, x_min : int, y_min: int, x_max: int, y_max: int) -> None:
+        """
+        Calculates gate's parameters, such as x, y, z, distance and alpha using
+        pxiel-to-real-size ratio and detected gate metrics.
+
+        Args:
+            x_min (int): minimal x of detected gate in pixels
+            y_min (int): minimal y of detected gate in pixels
+            x_max (int): maximal x of detected gate in pixels
+            y_max (int): maximal y of detected gate in pixels
+        """
+        
         self.alpha = np.arccos(self.get_ratio())
-        real_ratio = CIRCULAR_GATE_REAL_SIZE / (x_max - x_min)
+        real_ratio = CIRCULAR_GATE_REAL_SIZE / (y_max - y_min) # pixel-to-real-size ratio
         self.distance = DEFAULT_CAMERA_FOCAL * real_ratio
-        self.x = real_ratio * ( (x_min + x_max) / 2 - CAMERA_WIDTH/2 )
-        self.z = -real_ratio * ( (y_min + y_max) / 2 - CAMERA_HEIGHT/2 ) 
+        self.x = real_ratio * ((x_min + x_max) / 2.0 - CAMERA_WIDTH / 2.0)
+        self.z = (-1.0) * real_ratio * ((y_min + y_max) / 2.0 - CAMERA_HEIGHT / 2.0) 
         self.y = np.sqrt(self.distance**2 - self.x**2 - self.z**2)
         
