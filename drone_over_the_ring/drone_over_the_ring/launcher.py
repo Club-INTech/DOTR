@@ -54,7 +54,7 @@ if __name__ == "__main__":
     _img_process_routine = gate_detector.run
     _use_navigation = True
     _use_control = False
-    _order_provider = prs.BasicOrderProvider()
+    _order_provider = None
     _video_provider = prs.EmptyVideoProvider()
 
     for opt, arg in opts:
@@ -67,6 +67,7 @@ if __name__ == "__main__":
     if _mode == "viz":
         tello = Tello(retry_count=const.RETRY)
         _use_navigation = False
+        _order_provider = prs.BasicOrderProvider(tello)
         _video_provider = prs.TelloVideoProvider(tello)
     elif _mode == "ord":
         tello = Tello(retry_count=const.RETRY)

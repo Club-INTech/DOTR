@@ -44,10 +44,11 @@ class VideoProvider(ABC):
 
 class BasicOrderProvider(OrderProvider):
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, tello: Tello) -> None:
+        self.tello = tello
 
     def connect(self) -> None:
+        self.tello.connect()
         print("Connected to drone")
 
     def takeoff(self) -> None:

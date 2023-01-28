@@ -24,5 +24,5 @@ EPS_D = 0.18  # possible distance deviation in position before forward
 EPS_YAW = 0.05  # yaw sing change value (previous 0.1)
 FINAL_EPS_YAW = 0.08  # yaw angle deviation in position before forward
 SAFE_DISTANCE = 1.6  # a limit safe detect distance from the center of the gate
-OFFSET_Z = 0.5  # offset on the z axis (camera is pointed down)
+OFFSET_Z = 0.4  # offset on the z axis (camera is pointed down)
 NOT_DETECTED_LIMIT = 5  # a maximum number of non-detection before reset

@@ -93,12 +93,9 @@ class GateDescriptor():
         """
 
         self.alpha = np.arccos(self.get_ratio())
-        real_ratio = const.CIRCULAR_GATE_REAL_SIZE \
-            / (y_max - y_min)  # pixel-to-real-size ratio
+        real_ratio = const.CIRCULAR_GATE_REAL_SIZE / (y_max - y_min)  # pixel-to-real-size ratio
         self.distance = const.DEFAULT_CAMERA_FOCAL * real_ratio
-        self.x = real_ratio * ((x_min + x_max) / 2.0 -
-                               const.CAMERA_WIDTH / 2.0)
-        self.z = (-1.0) * real_ratio * ((y_min + y_max) / 2.0
-                                        - const.CAMERA_HEIGHT / 2.0)
+        self.x = real_ratio * ((x_min + x_max) / 2.0 - const.CAMERA_WIDTH / 2.0)
+        self.z = (-1.0) * real_ratio * ((y_min + y_max) / 2.0 - const.CAMERA_HEIGHT / 2.0)
         self.y = np.sqrt(self.distance**2 - self.x**2 - self.z**2)
 

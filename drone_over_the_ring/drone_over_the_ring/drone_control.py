@@ -23,8 +23,8 @@ class Drone():
                  navigation_config: str = "./config/default_nav_config.yaml",
                  use_navigation: bool = True,
                  use_control: bool = False,
-                 order_provider: prs.OrderProvider = prs.BasicOrderProvider(),
-                 video_provider: prs.VideoProvider = prs.EmptyVideoProvider()
+                 order_provider: prs.OrderProvider = None,
+                 video_provider: prs.VideoProvider = None,
                  ) -> None:
 
         self.__img_process_routine = img_process_routine
@@ -111,17 +111,14 @@ class Drone():
                 _img, _desc = self.__img_process_routine(img)
 
                 data1 = "safe_distance: \
-                    {s:.3f}/dx: {x:.3f}/dy: {y:.3f}/dz: {z:.3f}/dyaw: \
-                    {dyaw:.3f}/prev_dyaw: {prev_dyaw:.3f}/".format(
+                    {s:.3f}/dx: {x:.3f}/dy: {y:.3f}/dz: {z:.3f}/dyaw: {dyaw:.3f}/prev_dyaw: {prev_dyaw:.3f}/".format(
                             s=const.SAFE_DISTANCE,
                             x=self.__drone_state.dx,
                             y=self.__drone_state.dy,
                             z=self.__drone_state.dz,
                             dyaw=self.__drone_state.dyaw,
                             prev_dyaw=self.__drone_state.prev_dyaw)
-                data2 = "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: \
-                        {vyaw:.3f}/not_detected_count: {ndc}/gate_count: \
-                        {gc}/gate_detection_step: {gds}" .format(
+                data2 = "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: {vyaw:.3f}/not_detected_count: {ndc}/gate_count: \{gc}/gate_detection_step: {gds}" .format(
                             vx=self.__drone_state.vx,
                             vy=self.__drone_state.vy,
                             vz=self.__drone_state.vz,
@@ -203,8 +200,7 @@ class Drone():
                     self.__drone_state.vz = speed_z
                     self.__drone_state.vyaw = speed_yaw
 
-                    _cmd = "rc {speed_x} {speed_y} \
-                            {speed_z} {speed_yaw}".format(speed_x=speed_x,
+                    _cmd = "rc {speed_x} {speed_y} {speed_z} {speed_yaw}".format(speed_x=speed_x,
                                                           speed_y=speed_y,
                                                           speed_z=speed_z,
                                                           speed_yaw=speed_yaw)
@@ -284,8 +280,7 @@ class Drone():
                     if state_vector[3] == const.MAX_YAW_SPEED:
                         state_vector[3] = 0
 
-                _cmd = "rc {speed_x} {speed_y} {speed_z} \
-                        {speed_yaw}".format(speed_x=int(state_vector[0]),
+                _cmd = "rc {speed_x} {speed_y} {speed_z} {speed_yaw}".format(speed_x=int(state_vector[0]),
                                             speed_y=int(state_vector[1]),
                                             speed_z=int(state_vector[2]),
                                             speed_yaw=int(state_vector[3]))
@@ -297,10 +292,9 @@ class Drone():
                 img = self.__parent_conn.recv()
                 _img, _ = self.__img_process_routine(img)
                 cv.imshow("frame", _img)
-                if cv.waitKey(0) == ord("q"):
+                if cv.waitKey(1) == ord("q"):
                     self.__stop = True
                     break
-                time.sleep(const.DELAY)
 
         self.__video_provider.streamoff()
         time.sleep(const.DELAY)
