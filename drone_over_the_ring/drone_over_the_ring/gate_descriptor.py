@@ -1,7 +1,8 @@
 from enum import Enum
 from dataclasses import dataclass
 import numpy as np
-from const import *
+import const
+
 
 class GateType(Enum):
     """
@@ -53,7 +54,7 @@ class GateDescriptor():
     set_xyz_from_image(x_min, y_min, x_max, y_max):
         Allows to calculate all gate's parameters: x, y, z, alpha and distance
     """
-    
+
     x: float = 0.0
     y: float = 0.0
     z: float = 0.0
@@ -63,19 +64,23 @@ class GateDescriptor():
     pixel_height: int = 1
     type_: GateType = GateType.NO_GATE
     score: float = 0.0
-    
+
     def get_ratio(self) -> float:
         """
-        Calculates a width to height ratio which cannot be greater then one 
+        Calculates a width to height ratio which cannot be greater then one
         (false detections)
 
         Returns:
             float: a ratio leveled off to one
         """
-        
+
         return min(self.pixel_width / self.pixel_height, 1.0)
-    
-    def set_xyz_from_image(self, x_min : int, y_min: int, x_max: int, y_max: int) -> None:
+
+    def set_xyz_from_image(self,
+                           x_min: int,
+                           y_min: int,
+                           x_max: int,
+                           y_max: int) -> None:
         """
         Calculates gate's parameters, such as x, y, z, distance and alpha using
         pxiel-to-real-size ratio and detected gate metrics.
@@ -86,11 +91,14 @@ class GateDescriptor():
             x_max (int): maximal x of detected gate in pixels
             y_max (int): maximal y of detected gate in pixels
         """
-        
+
         self.alpha = np.arccos(self.get_ratio())
-        real_ratio = CIRCULAR_GATE_REAL_SIZE / (y_max - y_min) # pixel-to-real-size ratio
-        self.distance = DEFAULT_CAMERA_FOCAL * real_ratio
-        self.x = real_ratio * ((x_min + x_max) / 2.0 - CAMERA_WIDTH / 2.0)
-        self.z = (-1.0) * real_ratio * ((y_min + y_max) / 2.0 - CAMERA_HEIGHT / 2.0) 
+        real_ratio = const.CIRCULAR_GATE_REAL_SIZE \
+            / (y_max - y_min)  # pixel-to-real-size ratio
+        self.distance = const.DEFAULT_CAMERA_FOCAL * real_ratio
+        self.x = real_ratio * ((x_min + x_max) / 2.0 -
+                               const.CAMERA_WIDTH / 2.0)
+        self.z = (-1.0) * real_ratio * ((y_min + y_max) / 2.0
+                                        - const.CAMERA_HEIGHT / 2.0)
         self.y = np.sqrt(self.distance**2 - self.x**2 - self.z**2)
-        
+
