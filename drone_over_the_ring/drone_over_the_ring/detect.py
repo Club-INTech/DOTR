@@ -92,7 +92,9 @@ class GateDetector():
                 type_ = GateType.SQUARE_GATE
             elif(det[gate_nb][5] == 2):
                 type_ = GateType.HEX_GATE
-                
+            
+            print(det[gate_nb])
+
             gd = GateDescriptor(pixel_width=det[gate_nb][2].item()-det[gate_nb][0].item(),
                                     pixel_height=det[gate_nb][3].item()-det[gate_nb][1].item(),
                                     score=det[gate_nb][4].item(),
