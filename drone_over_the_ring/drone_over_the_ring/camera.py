@@ -1,10 +1,5 @@
 import cv2 as cv
-from detection_for_calib import GateDetector
 #from djitellopy import Tello
-
-CAMERA_WIDTH = 960
-CAMERA_HEIGHT = 720
-CAMERA_FOCAL = 991
 
 def camera_configuration():
     print("===== Welcome to camera cofiguration program =====")
