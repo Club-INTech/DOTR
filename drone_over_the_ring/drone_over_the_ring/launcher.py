@@ -71,6 +71,7 @@ if __name__ == "__main__":
         _video_provider = prs.TelloVideoProvider(tello)
     elif _mode == "ord":
         tello = Tello(retry_count=const.RETRY)
+        _order_provider = prs.BasicOrderProvider(tello)
         _video_provider = prs.TelloVideoProvider(tello)
     elif _mode == "rc":
         _img_process_routine = mock_routine

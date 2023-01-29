@@ -110,36 +110,6 @@ class Drone():
                     continue
                 _img, _desc = self.__img_process_routine(img)
 
-                data1 = "safe_distance: \
-                    {s:.3f}/dx: {x:.3f}/dy: {y:.3f}/dz: {z:.3f}/dyaw: {dyaw:.3f}/prev_dyaw: {prev_dyaw:.3f}/".format(
-                            s=const.SAFE_DISTANCE,
-                            x=self.__drone_state.dx,
-                            y=self.__drone_state.dy,
-                            z=self.__drone_state.dz,
-                            dyaw=self.__drone_state.dyaw,
-                            prev_dyaw=self.__drone_state.prev_dyaw)
-                data2 = "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: {vyaw:.3f}/not_detected_count: {ndc}/gate_count: \{gc}/gate_detection_step: {gds}" .format(
-                            vx=self.__drone_state.vx,
-                            vy=self.__drone_state.vy,
-                            vz=self.__drone_state.vz,
-                            vyaw=self.__drone_state.vyaw,
-                            ndc=self.__drone_state.not_detected_count,
-                            gc=self.__drone_state.gate_count,
-                            gds=str(self.__drone_state.gate_navigation_step))
-                data = data1 + data2
-                row_start = 500
-                row_step = 15
-                row = row_start
-                column = 700
-                for _, _d in enumerate(data.split("/")):
-                    cv.putText(img=_img, text=_d,
-                               org=(column, row), fontFace=cv.FONT_HERSHEY_TRIPLEX,
-                               fontScale=0.5, color=(0, 255, 0), thickness=1)
-                    row += row_step
-                cv.imshow("frame", _img)
-                if cv.waitKey(1) == ord('q'):
-                    self.__stop = True
-
                 if self.__drone_state.gate_count >= const.GATE_NUMBER:
                     self.__stop = True
                     break
@@ -205,6 +175,36 @@ class Drone():
                                                           speed_z=speed_z,
                                                           speed_yaw=speed_yaw)
                     self.execute_order(_cmd)
+
+                    data1 = "safe_distance: {s:.3f}/dx: {x:.3f}/dy: {y:.3f}/dz: {z:.3f}/dyaw: {dyaw:.3f}/prev_dyaw: {prev_dyaw:.3f}/".format(
+                                s=const.SAFE_DISTANCE,
+                                x=self.__drone_state.dx,
+                                y=self.__drone_state.dy,
+                                z=self.__drone_state.dz,
+                                dyaw=self.__drone_state.dyaw,
+                                prev_dyaw=self.__drone_state.prev_dyaw)
+                    data2 = "vx: {vx}/vy: {vy}/vz: {vz}/vyaw: {vyaw:.3f}/not_detected_count: {ndc}/gate_count: \{gc}/gate_detection_step: {gds}" .format(
+                                vx=self.__drone_state.vx,
+                                vy=self.__drone_state.vy,
+                                vz=self.__drone_state.vz,
+                                vyaw=self.__drone_state.vyaw,
+                                ndc=self.__drone_state.not_detected_count,
+                                gc=self.__drone_state.gate_count,
+                                gds=str(self.__drone_state.gate_navigation_step))
+                    data = data1 + data2
+                    row_start = 500
+                    row_step = 15
+                    row = row_start
+                    column = 700
+                    for _, _d in enumerate(data.split("/")):
+                        cv.putText(img=_img, text=_d,
+                                org=(column, row), fontFace=cv.FONT_HERSHEY_TRIPLEX,
+                                fontScale=0.5, color=(0, 255, 0), thickness=1)
+                        row += row_step
+                    cv.imshow("frame", _img)
+                    if cv.waitKey(1) == ord('q'):
+                        self.__stop = True
+                    
                     self.__drone_state.prev_dyaw = self.__drone_state.dyaw
 
         elif self.__use_control:

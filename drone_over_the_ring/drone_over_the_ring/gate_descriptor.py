@@ -17,6 +17,18 @@ class GateType(Enum):
     SQUARE_GATE = 3
     HEX_GATE = 4
 
+class EdgeEffect(Enum):
+    """
+    Enum for the types of the edge effect the bounding boxe is affected
+
+    Args:
+        Enum (_type_): a type of effect
+    """
+    TOP = 1
+    BOTTOM = 2
+    LEFT = 3
+    RIGHT = 4
+    NO_EFFECT = 5
 
 @dataclass(init=True, repr=True, eq=True, order=False, unsafe_hash=False)
 class GateDescriptor():
@@ -64,6 +76,7 @@ class GateDescriptor():
     pixel_height: int = 1
     type_: GateType = GateType.NO_GATE
     score: float = 0.0
+    edge: EdgeEffect = EdgeEffect.NO_EFFECT
 
     def get_ratio(self) -> float:
         """
@@ -75,6 +88,31 @@ class GateDescriptor():
         """
 
         return min(self.pixel_width / self.pixel_height, 1.0)
+
+    def check_edge_effect(self,
+                           x_min: int,
+                           y_min: int,
+                           x_max: int,
+                           y_max: int) -> None:
+        """
+        Define if the bouding boxe on the image is near the side of the camera,
+        which mean it's possible that the entire gate isn't seen.
+
+        Args:
+            x_min (int): minimal x of detected gate in pixels
+            y_min (int): minimal y of detected gate in pixels
+            x_max (int): maximal x of detected gate in pixels
+            y_max (int): maximal y of detected gate in pixels
+        """
+        if x_min < const.EPS_EDGE:
+            self.edge = EdgeEffect.LEFT
+        elif const.CAMERA_WIDTH - x_max < const.EPS_EDGE:
+            self.edge = EdgeEffect.RIGHT
+        elif y_min < const.EPS_EDGE:
+            self.edge = EdgeEffect.TOP
+        elif const.CAMERA_HEIGHT - y_max < const.EPS_EDGE:
+            self.edge = EdgeEffect.BOTTOM
+
 
     def set_xyz_from_image(self,
                            x_min: int,

@@ -99,7 +99,7 @@ class DroneState():
     sumZ: float = 0.0
     sumYaw: float = 0.0
     yaw_sign: float = 1.0
-    prev_dyaw: float = 0.0
+    prev_dyaw: float = 10.0
     dyaw: float = 0.0
     not_detected_count: int = 0
     gate_count: int = 0
@@ -144,8 +144,9 @@ class DroneState():
 
     def check_yaw_sign(self) -> None:
         if abs(self.dyaw) - abs(self.prev_dyaw) >= const.EPS_YAW:
+            print(str(self.dyaw) + " " + str(self.prev_dyaw))
             self.dyaw = (-1) * self.dyaw
-            self.yaw_sign = -1.0
+            self.yaw_sign = -1.0 * self.yaw_sign
 
     def is_at_safe_point(self) -> bool:
         return (self.dx**2)+(self.dy**2)+(self.dz**2) <= const.EPS_D \

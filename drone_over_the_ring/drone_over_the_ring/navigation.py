@@ -9,21 +9,21 @@ class Navigation():
 
     def __init__(self, navigation_config: str) -> None:
 
-        self.__kpx = 10.0
-        self.__krx = 15.0
-        self.__kix = 0.1
+        self.__kpx = 0.0
+        self.__krx = 0.0
+        self.__kix = 0.0
 
-        self.__kpy = 10.0
-        self.__kry = 15.0
-        self.__kiy = 0.1
+        self.__kpy = 0.0
+        self.__kry = 0.0
+        self.__kiy = 0.0
 
-        self.__kpz = 10.0
-        self.__krz = 15.0
-        self.__kiz = 0.1
+        self.__kpz = 0.0
+        self.__krz = 0.0
+        self.__kiz = 0.0
 
-        self.__kpyaw = 10.0
-        self.__kryaw = 15.0
-        self.__kiyaw = 0.1
+        self.__kpyaw = 0.0
+        self.__kryaw = 0.0
+        self.__kiyaw = 0.0
 
         with open(navigation_config, 'r') as _stream:
             _conf = yaml.safe_load(_stream)
@@ -36,7 +36,7 @@ class Navigation():
 
     def update_speed(self, _ds: DroneState) -> Tuple[int, int, int, int]:
 
-        _max_d = max([_ds.dx, _ds.dy, _ds.dz])
+        _max_d = max([abs(_ds.dx), abs(_ds.dy), abs(_ds.dz)])
         raw_speed_x = self.__kpx * _ds.dx + self.__krx * (_ds.dx / _max_d) \
             + self.__kix * _ds.sumX
         raw_speed_y = self.__kpy * _ds.dy + self.__kry * (_ds.dy / _max_d) \
