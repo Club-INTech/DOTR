@@ -133,6 +133,6 @@ class GateDetector():
             
         else:
             gd = GateDescriptor()
-            gd.append(gd)
+            gd_list.append(gd)
 
         return im0, gd
