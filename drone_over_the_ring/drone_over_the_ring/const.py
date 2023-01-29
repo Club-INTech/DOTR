@@ -2,7 +2,7 @@ MAX_DRONE_SPEED = 25.0  # maximum drone speed along x, y and z axes
 MIN_DRONE_SPEED = 0.0  # minimum drone speed along x, y and z axes
 MAX_YAW_SPEED = 20.0  # maximum drone rotation speed
 MIN_YAW_SPEED = 0.0  # minimum drone rotation speed
-GATE_NUMBER = 2  # number of gates to go through
+GATE_NUMBER = 3  # number of gates to go through
 MAX_INT_SUM = 40  # the maximum sum of integral
 
 CAMERA_WIDTH = 960  # camera's width in pixels
@@ -22,11 +22,12 @@ TAKEOFF_DELAY = 3  # a delay to tke on drone takeoff
 DELAY = 0.5  # a delay to start a process
 STOP_DELAY = 15  # drone stop delay
 
-EPS_D = 0.09  # possible distance deviation in position before forward
+EPS_D = 0.02  # possible distance deviation in position before forward
 MIN_APPROACH = -0.8  # minimum approach to gate to cross
 MAX_APPROACH = 0.2  # maximum approach to safe point to cross
-EPS_YAW = 0.015  # yaw sing change value (previous 0.1)
-FINAL_EPS_YAW = 0.1  # yaw angle deviation in position before forward
+MIN_EPS_YAW = 0.02  # yaw sing change value (previous 0.1)
+MAX_EPS_YAW = 0.09
+FINAL_EPS_YAW = 0.25  # yaw angle deviation in position before forward
 SAFE_DISTANCE = 1.8  # a limit safe detect distance from the center of the gate
-OFFSET_Z = 0.35  # offset on the z axis (camera is pointed down)
+OFFSET_Z = 0.1  # offset on the z axis (camera is pointed down)
 NOT_DETECTED_LIMIT = 5  # a maximum number of non-detection before reset

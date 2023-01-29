@@ -48,7 +48,7 @@ if __name__ == "__main__":
         _help()
         sys.exit(1)
 
-    gate_detector = GateDetector(weights="./config/wheights_training.pt")
+    gate_detector = GateDetector(weights="./config/test.pt")
 
     _mode = "full"  # defaults to full mode
     _img_process_routine = gate_detector.run

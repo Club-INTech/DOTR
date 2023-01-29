@@ -84,6 +84,7 @@ class GateDetector():
             heights_hexa = []
             heights_ring = []
             for i in range(len(det)):
+
                 if (det[i][5] == 0):
                     heights_ring.append(det[i][3]-det[i][1])
                 elif (det[i][5] == 1):
@@ -116,6 +117,8 @@ class GateDetector():
                                         pixel_height=det[gate_nb_ring][3].item()-det[gate_nb_ring][1].item(),
                                         score=det[gate_nb_ring][4].item(),
                                         type_= GateType.CIRCLE_GATE)
+                gd_ring.set_xyz_from_image(det[gate_nb_ring][0].item(), det[gate_nb_ring][1].item(), det[gate_nb_ring][2].item(), det[gate_nb_ring][3].item())
+                font                   = cv2.FONT_HERSHEY_SIMPLEX
                 # Adding annotation of the X,Y,Z and distance in meter of the gate
                 x_pos = int (( det[gate_nb_ring][2].item() + det[gate_nb_ring][0].item())/2)
                 y_pos = int (( det[gate_nb_ring][1].item() + det[gate_nb_ring][3].item())/2)
@@ -129,10 +132,8 @@ class GateDetector():
                 cv2.putText(im0, txt2, position2, font, fontScale, fontColor,2,cv2.LINE_AA, False)
                 gd_list.append(gd_ring)
 
-
-            
         else:
             gd = GateDescriptor()
             gd_list.append(gd)
 
-        return im0, gd
+        return im0, gd_list

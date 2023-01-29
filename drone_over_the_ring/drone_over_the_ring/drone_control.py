@@ -81,9 +81,14 @@ class Drone():
 
     def execute_order(self,
                       order: str) -> None:
-        if time.time_ns() - self.prev_t >= const.ORDER_DELAY:
+        command = order.split(" ")[0]
+        if command == "land" or order == "rc 0 0 0 0":
             self.__order_queue.put(order)
             self.prev_t = time.time_ns()
+        else:
+            if time.time_ns() - self.prev_t >= const.ORDER_DELAY:
+                self.__order_queue.put(order)
+                self.prev_t = time.time_ns()
 
     def __video_receiver(self,
                          video_provider: prs.VideoProvider,
@@ -152,7 +157,7 @@ class Drone():
                 for k in list_desc:
                     if k.type_ == GateType.HEX_GATE and self.__drone_state.gate_count == const.GATE_NUMBER - 1 :
                         _desc = k
-                    elif k.type_ == GateType.HEX_GATE and self.__drone_state.gate_count < const.GATE_NUMBER - 1 :
+                    if k.type_ == GateType.CIRCLE_GATE and self.__drone_state.gate_count < const.GATE_NUMBER - 1 :
                         _desc = k
 
                 if _desc.type_ == GateType.NO_GATE \
@@ -195,6 +200,8 @@ class Drone():
                     if self.__drone_state.is_at_safe_point():
                         self.execute_order("rc 0 0 0 0")
                         time.sleep(const.WAITING)
+                        self.__order_provider.down(int(2 * 100 * const.OFFSET_Z))
+                        time.sleep(const.FORWARD_WAITING)
                         self.__order_provider.forward(
                                 int(1.1 * (self.__drone_state.dy
                                            + const.SAFE_DISTANCE)*100))
