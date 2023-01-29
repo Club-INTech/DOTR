@@ -149,8 +149,9 @@ class DroneState():
             self.yaw_sign = -1.0 * self.yaw_sign
 
     def is_at_safe_point(self) -> bool:
-        return (self.dx**2)+(self.dy**2)+(self.dz**2) <= const.EPS_D \
-                and abs(self.dyaw) <= const.FINAL_EPS_YAW
+        return (self.dx**2) + (self.dz**2) <= const.EPS_D \
+                and abs(self.dyaw) <= const.FINAL_EPS_YAW \
+                and const.MIN_APPROACH <= self.dy <= const.MAX_APPROACH
 
     def update_safe_point(self) -> None:
         self.dy = self.dy - const.SAFE_DISTANCE

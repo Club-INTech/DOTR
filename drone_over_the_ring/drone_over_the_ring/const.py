@@ -21,7 +21,9 @@ TAKEOFF_DELAY = 3  # a delay to tke on drone takeoff
 DELAY = 0.5  # a delay to start a process
 STOP_DELAY = 15  # drone stop delay
 
-EPS_D = 0.1  # possible distance deviation in position before forward
+EPS_D = 0.09  # possible distance deviation in position before forward
+MIN_APPROACH = -0.8  # minimum approach to gate to cross
+MAX_APPROACH = 0.2  # maximum approach to safe point to cross
 EPS_YAW = 0.05  # yaw sing change value (previous 0.1)
 FINAL_EPS_YAW = 0.1  # yaw angle deviation in position before forward
 SAFE_DISTANCE = 1.8  # a limit safe detect distance from the center of the gate
