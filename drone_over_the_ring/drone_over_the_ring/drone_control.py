@@ -188,7 +188,8 @@ class Drone():
                         self.execute_order("rc 0 0 0 0")
                         time.sleep(const.WAITING)
                         self.__order_provider.forward(
-                                int(1.2 * const.SAFE_DISTANCE*100))
+                                int(1.1 * (self.__drone_state.dy
+                                           + const.SAFE_DISTANCE)*100))
                         self.__drone_state.reset()
                         time.sleep(const.FORWARD_WAITING)
                         self.__video_lock.acquire()
