@@ -147,7 +147,9 @@ class Drone():
                 if cv.waitKey(1) == ord('q'):
                     self.__stop = True
 
-                if _desc.type_ == GateType.NO_GATE:
+                if _desc.type_ == GateType.NO_GATE \
+                        and self.__drone_state.gate_navigation_step \
+                        == NavigationStep.DETECTED:
                     self.__drone_state.not_detected_count += 1
                     if self.__drone_state.not_detected_count \
                             >= const.NOT_DETECTED_LIMIT:
@@ -157,7 +159,7 @@ class Drone():
 
                     else:
                         continue
-                else:
+                elif _desc.type_ != GateType.NO_GATE:
                     self.__drone_state.not_detected_count = 0
                     if self.__drone_state.gate_navigation_step \
                             == NavigationStep.NOT_DETECTED:
