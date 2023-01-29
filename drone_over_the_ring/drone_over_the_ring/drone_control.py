@@ -40,6 +40,8 @@ class Drone():
         self.__stop = False
         self.tello = None
 
+        self.prev_t = 0
+
         if self.__order_provider is not None:
             self.__order_provider.connect()
         else:
@@ -79,7 +81,9 @@ class Drone():
 
     def execute_order(self,
                       order: str) -> None:
-        self.__order_queue.put(order)
+        if time.time_ns() - self.prev_t >= const.ORDER_DELAY:
+            self.__order_queue.put(order)
+            self.prev_t = time.time_ns()
 
     def __video_receiver(self,
                          video_provider: prs.VideoProvider,

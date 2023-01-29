@@ -16,6 +16,7 @@ HEX_GATE_REAL_SIZE = 0.665  # real diameter of hex gate
 
 RETRY = 3  # send command retry count
 WAITING = 2  # a waiting delay to execute rc 0 0 0 0 command before forawrd
+ORDER_DELAY = 100000000  # delay of order send in ns
 FORWARD_WAITING = 4  # waiting to execute forward command
 TAKEOFF_DELAY = 3  # a delay to tke on drone takeoff
 DELAY = 0.5  # a delay to start a process
