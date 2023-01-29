@@ -153,40 +153,10 @@ class DroneState():
                 and abs(self.dyaw) <= const.FINAL_EPS_YAW
 
     def update_safe_point(self) -> None:
-
-        # change only y if drone is aligned with the gate
-        if abs(self.dyaw) <= const.EPS_YAW:
-            self.dx = self.dx
-            self.dy = self.dy - const.SAFE_DISTANCE
-        else:
-            # slope of the perpendicular line
-            _alpha = - (1 / self.dyaw)
-            _beta = self.dy - _alpha * self.dx
-
-            # sign of dyaw used to choose equation root
-            _k = 1
-            if self.dyaw < 0:
-                _k = -1
-
-            # resolve equation ax^2 + bx +c = 0
-            a = (1 + _alpha ** 2)
-            b = (2 * self.dy / self.dyaw - 2 * _beta / self.dyaw - 2 * self.dx)
-            c = (self.dx ** 2 + self.dy ** 2 + _beta ** 2 -
-                 2 * _beta * self.dy - const.SAFE_DISTANCE ** 2)
-
-            # roots of the equation
-            x12 = np.roots([a, b, c])
-
-            # root choice
-            if _k < 0:
-                self.dx = min(x12[0], x12[1])
-            else:
-                self.dx = max(x12[0], x12[1])
-            self.dy = _alpha * self.dx + _beta
+        self.dy = self.dy - const.SAFE_DISTANCE
 
     def __sign(self, x) -> int:
         if x < 0:
             return -1
         else:
             return 1
-
