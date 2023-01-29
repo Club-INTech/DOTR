@@ -19,6 +19,10 @@ class OrderProvider(ABC):
         pass
 
     @abstractmethod
+    def down(self, x: int) -> None:
+        pass
+
+    @abstractmethod
     def execute_order(self, _cmd: str) -> None:
         pass
 
@@ -54,6 +58,9 @@ class BasicOrderProvider(OrderProvider):
     def takeoff(self) -> None:
         print("Executing takeoff")
 
+    def down(self, x: int) -> None:
+        print("Executing down " + str(x))
+
     def forward(self, x: int) -> None:
         print("Executing forward " + str(x))
 
@@ -74,6 +81,9 @@ class TelloOrderProvider(OrderProvider):
 
     def forward(self, x: int) -> None:
         self.tello.move_forward(x)
+
+    def down(self, x: int) -> None:
+        self.tello.move_down(x)
 
     def execute_order(self, _cmd: str) -> None:
         self.tello.send_command_without_return(_cmd)

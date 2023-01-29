@@ -88,9 +88,9 @@ class GateDetector():
                 
             if(det[gate_nb][5] == 0):
                 type_ = GateType.CIRCLE_GATE
-            elif(det[gate_nb][5] == 1):
-                type_ = GateType.SQUARE_GATE
             elif(det[gate_nb][5] == 2):
+                type_ = GateType.SQUARE_GATE
+            elif(det[gate_nb][5] == 1):
                 type_ = GateType.HEX_GATE
 
             gd = GateDescriptor(pixel_width=det[gate_nb][2].item()-det[gate_nb][0].item(),

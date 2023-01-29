@@ -143,7 +143,7 @@ class DroneState():
             * self.__sign(self.sumYaw)
 
     def check_yaw_sign(self) -> None:
-        if abs(self.dyaw) - abs(self.prev_dyaw) >= const.EPS_YAW:
+        if const.MIN_EPS_YAW <= abs(self.dyaw) - abs(self.prev_dyaw) <= const.MAX_EPS_YAW:
             print(str(self.dyaw) + " " + str(self.prev_dyaw))
             self.dyaw = (-1) * self.dyaw
             self.yaw_sign = -1.0 * self.yaw_sign
