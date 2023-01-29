@@ -5,7 +5,7 @@ import keyboard
 import multiprocessing as mp
 from multiprocessing.connection import Connection
 import cv2 as cv
-from typing import Callable, Tuple, Union
+from typing import Callable, Tuple, Union, List
 from gate_descriptor import GateDescriptor, GateType
 import threading
 import providers as prs
@@ -19,7 +19,7 @@ class Drone():
     def __init__(self,
                  img_process_routine: Callable[[np.ndarray],
                                                Tuple[np.ndarray,
-                                                     GateDescriptor]],
+                                                     List[GateDescriptor]]],
                  navigation_config: str = "./config/default_nav_config.yaml",
                  use_navigation: bool = True,
                  use_control: bool = False,
@@ -112,7 +112,7 @@ class Drone():
                 img = self.__parent_conn.recv()
                 if img is None:
                     continue
-                _img, _desc = self.__img_process_routine(img)
+                _img, list_desc = self.__img_process_routine(img)
 
                 if self.__drone_state.gate_count >= const.GATE_NUMBER:
                     self.__stop = True
@@ -146,6 +146,14 @@ class Drone():
                 cv.imshow("frame", _img)
                 if cv.waitKey(1) == ord('q'):
                     self.__stop = True
+
+                _desc = GateDescriptor()
+
+                for k in list_desc:
+                    if k.type_ == GateType.HEX_GATE and self.__drone_state.gate_count == const.GATE_NUMBER - 1 :
+                        _desc = k
+                    elif k.type_ == GateType.HEX_GATE and self.__drone_state.gate_count < const.GATE_NUMBER - 1 :
+                        _desc = k
 
                 if _desc.type_ == GateType.NO_GATE \
                         and self.__drone_state.gate_navigation_step \

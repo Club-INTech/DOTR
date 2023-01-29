@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 import numpy as np
 import sys
 import getopt
@@ -10,7 +10,7 @@ import providers as prs
 import const
 
 
-def mock_routine(img: np.ndarray) -> Tuple[np.ndarray, GateDescriptor]:
+def mock_routine(img: np.ndarray) -> Tuple[np.ndarray, List[GateDescriptor]]:
     return img, GateDescriptor()
 
 

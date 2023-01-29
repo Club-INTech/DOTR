@@ -78,42 +78,61 @@ class GateDetector():
         # Convertion of det to a gate_descriptor
         
         det = det.cpu()
+        gd_list = []
 
         if(len(det) > 0):
-            heights = []
+            heights_hexa = []
+            heights_ring = []
             for i in range(len(det)):
-                heights.append(det[i][3]-det[i][1])
-            
-            gate_nb = heights.index(max(heights))    
-                
-            if(det[gate_nb][5] == 0):
-                type_ = GateType.CIRCLE_GATE
-            elif(det[gate_nb][5] == 1):
-                type_ = GateType.SQUARE_GATE
-            elif(det[gate_nb][5] == 2):
-                type_ = GateType.HEX_GATE
+                if (det[i][5] == 0):
+                    heights_ring.append(det[i][3]-det[i][1])
+                elif (det[i][5] == 1):
+                    heights_hexa.append(det[i][3]-det[i][1])    
 
-            gd = GateDescriptor(pixel_width=det[gate_nb][2].item()-det[gate_nb][0].item(),
-                                    pixel_height=det[gate_nb][3].item()-det[gate_nb][1].item(),
-                                    score=det[gate_nb][4].item(),
-                                    type_= type_)
-            gd.set_xyz_from_image(det[gate_nb][0].item(), det[gate_nb][1].item(), det[gate_nb][2].item(), det[gate_nb][3].item())
-            # Adding annotation of the X,Y,Z and distance in meter of the gate
+            if(len(heights_hexa) != 0):
+                gate_nb_hexa = heights_hexa.index(max(heights_hexa))
+                gd_hexa = GateDescriptor(pixel_width=det[gate_nb_hexa][2].item()-det[gate_nb_hexa][0].item(),
+                                        pixel_height=det[gate_nb_hexa][3].item()-det[gate_nb_hexa][1].item(),
+                                        score=det[gate_nb_hexa][4].item(),
+                                        type_= GateType.HEX_GATE)
+                gd_hexa.set_xyz_from_image(det[gate_nb_hexa][0].item(), det[gate_nb_hexa][1].item(), det[gate_nb_hexa][2].item(), det[gate_nb_hexa][3].item())
+                font                   = cv2.FONT_HERSHEY_SIMPLEX
+                # Adding annotation of the X,Y,Z and distance in meter of the gate
+                x_pos = int (( det[gate_nb_hexa][2].item() + det[gate_nb_hexa][0].item())/2)
+                y_pos = int (( det[gate_nb_hexa][1].item() + det[gate_nb_hexa][3].item())/2)
+                position1               = (x_pos , y_pos)
+                position2               = (x_pos , y_pos+20)
+                fontScale              = 0.5
+                fontColor              = (255,0,0)
+                txt1 = "X : {x:.3f}, Y : {y:.3f}".format(x=gd_hexa.x,y=gd_hexa.y)
+                txt2 = "Z : {z:.3f}, D : {d:.3f}".format(z=gd_hexa.z,d=gd_hexa.distance)
+                cv2.putText(im0, txt1, position1, font, fontScale, fontColor,2,cv2.LINE_AA, False)
+                cv2.putText(im0, txt2, position2, font, fontScale, fontColor,2,cv2.LINE_AA, False)
+                gd_list.append(gd_hexa)
 
-            font                   = cv2.FONT_HERSHEY_SIMPLEX
-            x_pos = int (( det[gate_nb][2].item() + det[gate_nb][0].item())/2)
-            y_pos = int (( det[gate_nb][1].item() + det[gate_nb][3].item())/2)
-            position1               = (x_pos , y_pos)
-            position2               = (x_pos , y_pos+20)
-            fontScale              = 0.5
-            fontColor              = (255,0,0)
-            txt1 = "X : {x:.3f}, Y : {y:.3f}".format(x=gd.x,y=gd.y)
-            txt2 = "Z : {z:.3f}, D : {d:.3f}".format(z=gd.z,d=gd.distance)
-            cv2.putText(im0, txt1, position1, font, fontScale, fontColor,2,cv2.LINE_AA, False)
-            cv2.putText(im0, txt2, position2, font, fontScale, fontColor,2,cv2.LINE_AA, False)
+            if(len(heights_ring) != 0):
+                gate_nb_ring = heights_ring.index(max(heights_ring))
+                gd_ring = GateDescriptor(pixel_width=det[gate_nb_ring][2].item()-det[gate_nb_ring][0].item(),
+                                        pixel_height=det[gate_nb_ring][3].item()-det[gate_nb_ring][1].item(),
+                                        score=det[gate_nb_ring][4].item(),
+                                        type_= GateType.CIRCLE_GATE)
+                # Adding annotation of the X,Y,Z and distance in meter of the gate
+                x_pos = int (( det[gate_nb_ring][2].item() + det[gate_nb_ring][0].item())/2)
+                y_pos = int (( det[gate_nb_ring][1].item() + det[gate_nb_ring][3].item())/2)
+                position1               = (x_pos , y_pos)
+                position2               = (x_pos , y_pos+20)
+                fontScale              = 0.5
+                fontColor              = (255,0,0)
+                txt1 = "X : {x:.3f}, Y : {y:.3f}".format(x=gd_ring.x,y=gd_ring.y)
+                txt2 = "Z : {z:.3f}, D : {d:.3f}".format(z=gd_ring.z,d=gd_ring.distance)
+                cv2.putText(im0, txt1, position1, font, fontScale, fontColor,2,cv2.LINE_AA, False)
+                cv2.putText(im0, txt2, position2, font, fontScale, fontColor,2,cv2.LINE_AA, False)
+                gd_list.append(gd_ring)
+
+
             
         else:
             gd = GateDescriptor()
-
+            gd.append(gd)
 
         return im0, gd
