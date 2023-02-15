@@ -172,7 +172,7 @@ def save_augmented_data(transformed_img,transformed_bboxes,path): # Path = path 
 
 # ==================================================================== Add of the augmented data =======================================================================================
 
-def create_augmented_data(path_to_images,path_to_labels):
+def create_augmented_data(path_to_images,path_to_labels,path_to_save):
     files = os.listdir(path_to_images)
     NB_imgs = len(files)
     for i in range(NB_imgs):
@@ -180,7 +180,7 @@ def create_augmented_data(path_to_images,path_to_labels):
         img = cv2.imread(path_to_images + r'\\'+ files[i])
         bboxes = ReadTxt(path_to_labels + r'\\'+ files[i][:-4] + '.txt')
         transformed_img, transformed_bboxes = data_augmentation_horizontal(img,bboxes)
-        save_augmented_data(transformed_img,transformed_bboxes,r'D:\DATASET_FINAL_DRONE\test_augmented_data')
+        save_augmented_data(transformed_img,transformed_bboxes,path_to_save)
 
 # ==================================================================== Creation of the split ===========================================================================================
 
@@ -196,5 +196,3 @@ def split(path_to_dataset): # Split data from training directories to validation
     print("Moving " + str(count) + " images from train to val out of " + str(NB_imgs) + " images")
 
 # ==================================================================== End =============================================================================================================
-
-INDEX_end_first_images_batch = 312 # It's the index of the last image taken with the drone

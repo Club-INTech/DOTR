@@ -10,6 +10,8 @@ IMAGE_HEIGHT = 720
 # Path of the directory containing the dataset
 ROOT_path = r'D:\DATASET_FINAL_DRONE'
 
+# There should have both folder named "images" and "label" in this directory (ROOT_path)
+
 # Add the bounding box to the image from the .txt file
 def print_bboxesYOLO(img,bboxes):
     if len(bboxes) == 0:
@@ -38,13 +40,13 @@ while True:
         break
     if key == ord('d'):
         num_image += 1
-        img = cv2.imread(ROOT_path+r'\test_augmented_data\images\image'+name_num+'.jpg')
-        bboxes = utils_dataset.ReadTxt(ROOT_path+r'\test_augmented_data\label\image'+name_num+'.txt')
+        img = cv2.imread(ROOT_path+r'\images\image'+name_num+'.jpg')
+        bboxes = utils_dataset.ReadTxt(ROOT_path+r'\label\image'+name_num+'.txt')
         img_to_show = print_bboxesYOLO(img,bboxes)
     elif key == ord('q'):
         num_image -= 1
-        img = cv2.imread(ROOT_path+r'\test_augmented_data\images\image'+name_num+'.jpg')
-        bboxes = utils_dataset.ReadTxt(ROOT_path+r'\test_augmented_data\label\image'+name_num+'.txt')
+        img = cv2.imread(ROOT_path+r'\images\image'+name_num+'.jpg')
+        bboxes = utils_dataset.ReadTxt(ROOT_path+r'\label\image'+name_num+'.txt')
         img_to_show = print_bboxesYOLO(img,bboxes)
     if key == ord('z'):
         print('num_image : ',num_image)
