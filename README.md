@@ -24,6 +24,20 @@ Clone the repository and create python virtual environment. You need python3.8 o
 
 ---
 
+### ***Create your dataset***
+
+In this repository you can find two of our finals dataset - the first called **simple_ring** with just one class and the second called **remplir** with both classes. However you can create your own dataset uing our scripts python in this folder [dataset](dataset).
+
+You want first to take images with the drone so we wrote a script python to do it [here](dataset/dataset_creator.py).
+
+Then you need to label all your images, we used the software [LabelMe](https://github.com/wkentaro/labelme). However, the output format from Labelme doesn't match Yolo. So we wrote some function [here](dataset) to create the yolo format in a separate folder.
+
+We also create a function to do a horizontal augmentation offline of our dataset.
+
+At the end, we created a script [datacheck.py](dataset/datacheck.py) to be sure that the labelisation is correct.
+
+---
+
 ### ***Drone-only mode install***
 
 The drone-only mode allows you to control the real tello edu drone and to receive frames from its camera. It also provides an autonomous mode in which drone detects gates and automatically crosses them. With this mode you can create ***empty, basic and tello video and orders providers, but ros providers will always be empty***.
